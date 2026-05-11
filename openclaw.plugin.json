@@ -1,0 +1,28 @@
+{
+  "id": "sequential-thinking",
+  "name": "SequentialThinking",
+  "description": "Native sequential_thinking tool for dynamic and reflective problem-solving.",
+  "activation": {
+    "onStartup": true
+  },
+  "contracts": {
+    "tools": ["sequential_thinking"]
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "thoughtLogging": {
+        "type": "boolean",
+        "description": "Log formatted thoughts to console",
+        "default": true
+      },
+      "models": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Model IDs that should prefer sequential_thinking for complex problems",
+        "default": []
+      }
+    }
+  }
+}
