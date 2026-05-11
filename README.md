@@ -1,7 +1,7 @@
 # SequentialThinking
+
 [![OpenClaw](https://img.shields.io/badge/Platform-OpenClaw-blue.svg)](https://github.com/openclaw/openclaw)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 
 A native OpenClaw plugin that provides the `sequential_thinking` tool for dynamic and reflective problem-solving — no MCP dependency required.
 
@@ -70,4 +70,4 @@ Facilitates a detailed, step-by-step thinking process for problem-solving and an
 
 ---
 
-_Powered by SequentialThinking | OpenClaw Plugin_
+_🌸　Powered by Ａni | [OpenClaw Plugin] © 2026_
