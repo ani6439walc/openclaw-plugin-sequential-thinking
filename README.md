@@ -23,22 +23,22 @@ This plugin registers a first-class `sequential_thinking` tool directly into the
 │                     OpenClaw Runtime                        │
 │                                                             │
 │  ┌───────────────────────────────────────────────────────┐  │
-│  │              Plugin Entry (index.ts)                   │  │
-│  │  definePluginEntry({ register: registerSequential... })│  │
+│  │              Plugin Entry (index.ts)                  │  │
+│  │  definePluginEntry({ register: registerSequential...})│  │
 │  └──────────────────────┬────────────────────────────────┘  │
 │                         │                                   │
 │  ┌──────────────────────▼────────────────────────────────┐  │
-│  │           Plugin Registration (plugin.ts)              │  │
-│  │                                                        │  │
+│  │           Plugin Registration (plugin.ts)             │  │
+│  │                                                       │  │
 │  │  ┌────────────────┐    ┌──────────────────────────┐   │  │
-│  │  │ resolveConfig() │    │ SequentialThinkingTool   │   │  │
-│  │  │  (config.ts)    │    │  (tool.ts)               │   │  │
+│  │  │ resolveConfig()│    │ SequentialThinkingTool   │   │  │
+│  │  │  (config.ts)   │    │  (tool.ts)               │   │  │
 │  │  └────────┬───────┘    │  - formatThought()       │   │  │
 │  │           │            │  - processThought()      │   │  │
 │  │           ▼            │  - input validation      │   │  │
 │  │  ┌──────────────────┐  └──────────┬───────────────┘   │  │
-│  │  │ 6 Lifecycle Hooks│◄────────────┘                    │  │
-│  │  │ - before_prompt  │                                  │  │
+│  │  │ 6 Lifecycle Hooks│◄────────────┘                   │  │
+│  │  │ - before_prompt  │                                 │  │
 │  │  │ - before_tool    │  ┌──────────────────────────┐   │  │
 │  │  │ - after_tool     │  │ SessionStateManager      │   │  │
 │  │  │ - message_sending│  │  (state.ts)              │   │  │
@@ -47,15 +47,15 @@ This plugin registers a first-class `sequential_thinking` tool directly into the
 │  │  │                  │  │ - purgeSessionState()    │   │  │
 │  │  │                  │  │ - getCleanupCallback()   │   │  │
 │  │  └──────────────────┘  └──────────┬───────────────┘   │  │
-│  │                                   │                    │  │
+│  │                                   │                   │  │
 │  │  ┌────────────────────────────────▼────────────────┐  │  │
-│  │  │          SDK Session Extension                   │  │  │
+│  │  │          SDK Session Extension                  │  │  │
 │  │  │  registerSessionExtension({                     │  │  │
 │  │  │    namespace: "sequential_thinking_state",      │  │  │
 │  │  │    cleanup: manager.getCleanupCallback()        │  │  │
-│  │  │  })                                              │  │  │
+│  │  │  })                                             │  │  │
 │  │  └─────────────────────────────────────────────────┘  │  │
-│  └──────────────────────────────────────────────────────┘  │
+│  └───────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
