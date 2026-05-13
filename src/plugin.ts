@@ -1,6 +1,9 @@
 import { Type } from "typebox";
-import type { AgentTool } from "@mariozechner/pi-agent-core";
-import { createSubsystemLogger, type OpenClawPluginApi } from "../api.js";
+import {
+  createSubsystemLogger,
+  type OpenClawPluginApi,
+  type AnyAgentTool,
+} from "../api.js";
 import { resolveConfig } from "./config.js";
 import {
   SequentialThinkingTool,
@@ -207,13 +210,13 @@ export function registerSequentialThinkingPlugin(api: OpenClawPluginApi): void {
     purgeSessionState(ctx.sessionKey, "agent_end");
   });
 
-  const tool: AgentTool<typeof ParametersSchema> = {
+  const tool: AnyAgentTool = {
     name: "sequential_thinking",
     label: "Sequential Thinking",
     description: TOOL_DESCRIPTION,
     parameters: ParametersSchema,
     executionMode: "sequential",
-    execute: async (toolCallId, params, _signal, _onUpdate) => {
+    execute: async (toolCallId, params: ThoughtData, _signal, _onUpdate) => {
       let state: RunState = {
         thoughtHistory: [],
         branches: {},
@@ -252,5 +255,5 @@ export function registerSequentialThinkingPlugin(api: OpenClawPluginApi): void {
     },
   };
 
-  api.registerTool(tool);
+  api.registerTool(tool as any);
 }
