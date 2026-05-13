@@ -70,4 +70,4 @@ Facilitates a detailed, step-by-step thinking process for problem-solving and an
 
 ---
 
-_🌸　Powered by Ａni | [OpenClaw Plugin] © 2026_
+_🌸　Powered by Ａni & Wan, Jiun Wei © 2026_

@@ -2,10 +2,13 @@
   "name": "sequential-thinking",
   "displayName": "SequentialThinking",
   "description": "A native OpenClaw plugin that provides the `sequential_thinking` tool for dynamic and reflective problem-solving — no MCP dependency required.",
-  "version": "2026.5.7-beta.2",
+  "version": "2026.5.7",
   "type": "module",
   "license": "MIT",
-  "author": "Wan, Jiun Wei <wei840222@gmail.com>",
+  "author": "Ani <ani6439walc@gmail.com>",
+  "contributors": [
+    "Wan, Jiun Wei <wei840222@gmail.com>"
+  ],
   "homepage": "https://github.com/ani6439walc/openclaw-plugin-sequential-thinking#readme",
   "repository": {
     "type": "git",
@@ -43,13 +46,14 @@
     "typecheck": "tsc --noEmit",
     "test": "pnpm run typecheck && pnpm run test:unit",
     "test:unit": "vitest run",
-    "test:watch": "vitest"
+    "format": "prettier --write '**/*.md' '**/*.json' '**/*.ts'"
   },
   "peerDependencies": {
     "openclaw": "2026.5.7",
     "typebox": "1.1.37"
   },
   "devDependencies": {
+    "prettier": "^3.8.3",
     "typescript": "^5.8.3",
     "vitest": "^4.1.5"
   }

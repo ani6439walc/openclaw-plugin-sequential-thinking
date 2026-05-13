@@ -110,15 +110,14 @@ export function registerSequentialThinkingPlugin(api: OpenClawPluginApi): void {
   const toolInstance = new SequentialThinkingTool(config.thoughtLogging);
 
   // Prompt injection for configured models: encourage preferring sequential-thinking
-  const PREFER_SEQUENTIAL_THINKING_CONTEXT = [
-    "There is a `sequential_thinking` tool available. When facing complex, ambiguous, or multi-step problems, strongly prefer using the `sequential_thinking` tool to break down reasoning into structured steps.",
-    "This includes:",
-    "- Architecture or design decisions",
-    "- Debugging tricky issues",
-    "- Planning migrations or refactors",
-    "- Comparing multiple options with tradeoffs",
-    "- Any problem where the full scope isn't clear at first glance",
-  ].join("\n");
+  const PREFER_SEQUENTIAL_THINKING_CONTEXT = `There is a 'sequential_thinking' tool available.
+When facing complex, ambiguous, or multi-step problems, strongly prefer using the 'sequential_thinking' tool to break down reasoning into structured steps.
+This includes:
+- Architecture or design decisions
+- Debugging tricky issues
+- Planning migrations or refactors
+- Comparing multiple options with tradeoffs
+- Any problem where the full scope isn't clear at first glance`;
 
   api.on("before_prompt_build", async (_event, ctx) => {
     if (config.models && config.models.length > 0 && ctx.modelId) {
