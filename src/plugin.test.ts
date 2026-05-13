@@ -62,10 +62,6 @@ describe("registerSequentialThinkingPlugin", () => {
       expect.any(Function),
     );
     expect(mockApi.on).toHaveBeenCalledWith(
-      "after_tool_call",
-      expect.any(Function),
-    );
-    expect(mockApi.on).toHaveBeenCalledWith(
       "message_sending",
       expect.any(Function),
     );
@@ -197,16 +193,6 @@ describe("registerSequentialThinkingPlugin", () => {
       sessionKey: "session-xyz",
     };
     await mockApi._emit("before_tool_call", ctx);
-  });
-
-  it("after_tool_call cleans up toolCallId mapping", async () => {
-    registerSequentialThinkingPlugin(mockApi as any);
-
-    const ctx = {
-      toolName: "sequential_thinking",
-      toolCallId: "call-789",
-    };
-    await mockApi._emit("after_tool_call", ctx);
   });
 
   it("message_sending purges session state", async () => {

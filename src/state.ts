@@ -36,6 +36,11 @@ export class SessionStateManager {
 
   purgeSessionState(sessionKey: string): void {
     this.stateBySessionKey.delete(sessionKey);
+    for (const [toolCallId, sk] of this.sessionKeyByToolCallId) {
+      if (sk === sessionKey) {
+        this.sessionKeyByToolCallId.delete(toolCallId);
+      }
+    }
   }
 
   hasState(sessionKey: string): boolean {

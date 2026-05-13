@@ -212,17 +212,6 @@ export function registerSequentialThinkingPlugin(api: OpenClawPluginApi): void {
     return undefined;
   });
 
-  // Hook: clean up toolCallId mapping after execution
-  api.on("after_tool_call", async (_event, ctx) => {
-    if (ctx.toolName === "sequential_thinking" && ctx.toolCallId) {
-      manager.removeToolCallMapping(ctx.toolCallId);
-      logger.debug(
-        `after_tool_call hook triggered, ctx: ${JSON.stringify(ctx)}`,
-      );
-    }
-    return undefined;
-  });
-
   // Hook: purge session state when message_sending
   api.on("message_sending", async (_event, ctx) => {
     if (ctx.sessionKey) {
