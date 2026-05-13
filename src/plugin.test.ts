@@ -97,6 +97,7 @@ describe("registerSequentialThinkingPlugin", () => {
     expect(tool.description).toContain("nextThoughtNeeded");
     expect(tool.description).toContain("thoughtNumber");
     expect(tool.description).toContain("totalThoughts");
+    expect(tool.parameters.additionalProperties).toBe(false);
   });
 
   it("tool execute processes thoughts correctly", async () => {

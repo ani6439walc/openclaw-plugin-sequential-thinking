@@ -62,31 +62,60 @@ export class SequentialThinkingTool {
     isError?: boolean;
   } {
     try {
-      // Adjust totalThoughts if thoughtNumber exceeds it
-      if (input.thoughtNumber > input.totalThoughts) {
-        input.totalThoughts = input.thoughtNumber;
+      // Input validation
+      if (
+        !Number.isFinite(input.thoughtNumber) ||
+        !Number.isInteger(input.thoughtNumber) ||
+        input.thoughtNumber <= 0
+      ) {
+        return {
+          text: "Error: thoughtNumber must be a positive integer",
+          isError: true,
+        };
+      }
+      if (
+        !Number.isFinite(input.totalThoughts) ||
+        !Number.isInteger(input.totalThoughts) ||
+        input.totalThoughts <= 0
+      ) {
+        return {
+          text: "Error: totalThoughts must be a positive integer",
+          isError: true,
+        };
+      }
+      if (typeof input.thought !== "string" || input.thought.trim() === "") {
+        return {
+          text: "Error: thought must be a non-empty string",
+          isError: true,
+        };
       }
 
-      state.thoughtHistory.push(input);
+      // Use local copy to avoid mutating input
+      const adjustedInput = { ...input };
+      if (adjustedInput.thoughtNumber > adjustedInput.totalThoughts) {
+        adjustedInput.totalThoughts = adjustedInput.thoughtNumber;
+      }
 
-      if (input.branchFromThought && input.branchId) {
-        if (!state.branches[input.branchId]) {
-          state.branches[input.branchId] = [];
+      state.thoughtHistory.push(adjustedInput);
+
+      if (adjustedInput.branchFromThought && adjustedInput.branchId) {
+        if (!state.branches[adjustedInput.branchId]) {
+          state.branches[adjustedInput.branchId] = [];
         }
-        state.branches[input.branchId].push(input);
+        state.branches[adjustedInput.branchId].push(adjustedInput);
       }
 
       if (this.thoughtLogging) {
-        const formattedThought = this.formatThought(input);
+        const formattedThought = this.formatThought(adjustedInput);
         logger.debug(formattedThought, {
           subsystem: "plugins/sequential-thinking",
         });
       }
 
       const result = {
-        thoughtNumber: input.thoughtNumber,
-        totalThoughts: input.totalThoughts,
-        nextThoughtNeeded: input.nextThoughtNeeded,
+        thoughtNumber: adjustedInput.thoughtNumber,
+        totalThoughts: adjustedInput.totalThoughts,
+        nextThoughtNeeded: adjustedInput.nextThoughtNeeded,
         branches: Object.keys(state.branches),
         thoughtHistoryLength: state.thoughtHistory.length,
       };

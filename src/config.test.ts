@@ -57,7 +57,14 @@ describe("resolveConfig", () => {
     const result = resolveConfig({
       models: ["claude-sonnet-4", 123, null, "gpt-4o", undefined, "", "opus"],
     });
-    expect(result.models).toEqual(["claude-sonnet-4", "gpt-4o", "", "opus"]);
+    expect(result.models).toEqual(["claude-sonnet-4", "gpt-4o", "opus"]);
+  });
+
+  it("filters empty strings from models", () => {
+    const result = resolveConfig({
+      models: ["gpt-4", "", "claude"],
+    });
+    expect(result.models).toEqual(["gpt-4", "claude"]);
   });
 
   it("preserves all valid string models", () => {

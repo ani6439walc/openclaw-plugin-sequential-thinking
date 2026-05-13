@@ -106,7 +106,7 @@ describe("SequentialThinkingTool", () => {
 
       expect(parsed.thoughtNumber).toBe(10);
       expect(parsed.totalThoughts).toBe(10);
-      expect(input.totalThoughts).toBe(10);
+      expect(input.totalThoughts).toBe(3);
     });
 
     it("does not adjust totalThoughts when thoughtNumber is within range", () => {
@@ -307,6 +307,118 @@ describe("SequentialThinkingTool", () => {
       );
       expect(result.thoughtHistoryLength).toBe(5);
       expect(result.branches).toEqual(["alt"]);
+    });
+  });
+
+  describe("input validation", () => {
+    it("returns error for NaN thoughtNumber", () => {
+      const tool = new SequentialThinkingTool(false);
+      const state = makeState();
+      const input = makeThought({ thoughtNumber: NaN });
+
+      const result = tool.processThought(input, state);
+
+      expect(result.isError).toBe(true);
+      expect(result.text).toContain("thoughtNumber");
+    });
+
+    it("returns error for thoughtNumber of 0", () => {
+      const tool = new SequentialThinkingTool(false);
+      const state = makeState();
+      const input = makeThought({ thoughtNumber: 0 });
+
+      const result = tool.processThought(input, state);
+
+      expect(result.isError).toBe(true);
+      expect(result.text).toContain("thoughtNumber");
+    });
+
+    it("returns error for negative thoughtNumber", () => {
+      const tool = new SequentialThinkingTool(false);
+      const state = makeState();
+      const input = makeThought({ thoughtNumber: -1 });
+
+      const result = tool.processThought(input, state);
+
+      expect(result.isError).toBe(true);
+      expect(result.text).toContain("thoughtNumber");
+    });
+
+    it("returns error for non-integer thoughtNumber", () => {
+      const tool = new SequentialThinkingTool(false);
+      const state = makeState();
+      const input = makeThought({ thoughtNumber: 1.5 });
+
+      const result = tool.processThought(input, state);
+
+      expect(result.isError).toBe(true);
+      expect(result.text).toContain("thoughtNumber");
+    });
+
+    it("returns error for NaN totalThoughts", () => {
+      const tool = new SequentialThinkingTool(false);
+      const state = makeState();
+      const input = makeThought({ totalThoughts: NaN });
+
+      const result = tool.processThought(input, state);
+
+      expect(result.isError).toBe(true);
+      expect(result.text).toContain("totalThoughts");
+    });
+
+    it("returns error for totalThoughts of 0", () => {
+      const tool = new SequentialThinkingTool(false);
+      const state = makeState();
+      const input = makeThought({ totalThoughts: 0 });
+
+      const result = tool.processThought(input, state);
+
+      expect(result.isError).toBe(true);
+      expect(result.text).toContain("totalThoughts");
+    });
+
+    it("returns error for negative totalThoughts", () => {
+      const tool = new SequentialThinkingTool(false);
+      const state = makeState();
+      const input = makeThought({ totalThoughts: -1 });
+
+      const result = tool.processThought(input, state);
+
+      expect(result.isError).toBe(true);
+      expect(result.text).toContain("totalThoughts");
+    });
+
+    it("returns error for non-integer totalThoughts", () => {
+      const tool = new SequentialThinkingTool(false);
+      const state = makeState();
+      const input = makeThought({ totalThoughts: 0.5 });
+
+      const result = tool.processThought(input, state);
+
+      expect(result.isError).toBe(true);
+      expect(result.text).toContain("totalThoughts");
+    });
+
+    it("returns error for empty thought string", () => {
+      const tool = new SequentialThinkingTool(false);
+      const state = makeState();
+      const input = makeThought({ thought: "" });
+
+      const result = tool.processThought(input, state);
+
+      expect(result.isError).toBe(true);
+      expect(result.text).toContain("thought");
+    });
+
+    it("returns error for whitespace-only thought", () => {
+      const tool = new SequentialThinkingTool(false);
+      const state = makeState();
+      const input = makeThought({ thought: "   " });
+
+      const result = tool.processThought(input, state);
+
+      expect(result.isError).toBe(true);
+      expect(result.text).toContain("thought");
     });
   });
 
