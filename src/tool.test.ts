@@ -6,9 +6,9 @@ import {
 } from "./tool.js";
 
 vi.mock("../api.js", () => ({
-  createSubsystemLogger: vi.fn(() => ({
+  logger: {
     debug: vi.fn(),
-  })),
+  },
 }));
 
 function makeThought(overrides: Partial<ThoughtData> = {}): ThoughtData {
@@ -437,7 +437,8 @@ describe("SequentialThinkingTool", () => {
   });
 
   describe("formatThought (indirect via logging)", () => {
-    it("formats normal thought correctly", () => {
+    it("formats normal thought correctly", async () => {
+      const { logger } = await import("../api.js");
       const tool = new SequentialThinkingTool(true);
       const state = makeState();
 
@@ -450,11 +451,7 @@ describe("SequentialThinkingTool", () => {
         state,
       );
 
-      // The logger should have been called with the formatted thought
-      const logger = (tool as any).logger;
-      if (logger && logger.debug) {
-        expect(logger.debug).toHaveBeenCalled();
-      }
+      expect(logger.debug).toHaveBeenCalled();
     });
   });
 });

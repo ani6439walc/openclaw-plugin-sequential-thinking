@@ -1,6 +1,4 @@
-import { createSubsystemLogger } from "../api.js";
-
-const logger = createSubsystemLogger("plugins/sequential-thinking");
+import { logger } from "../api.js";
 
 export interface ThoughtData {
   thought: string;
@@ -106,10 +104,7 @@ export class SequentialThinkingTool {
       }
 
       if (this.thoughtLogging) {
-        const formattedThought = this.formatThought(adjustedInput);
-        logger.debug(formattedThought, {
-          subsystem: "plugins/sequential-thinking",
-        });
+        logger.debug(this.formatThought(adjustedInput));
       }
 
       const result = {

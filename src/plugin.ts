@@ -1,50 +1,12 @@
 import { SessionStateManager } from "./state.js";
 import { Type } from "typebox";
-import {
-  createSubsystemLogger,
-  type OpenClawPluginApi,
-  type AnyAgentTool,
-} from "../api.js";
+import { type OpenClawPluginApi, logger } from "../api.js";
 import { resolveConfig } from "./config.js";
 import {
   SequentialThinkingTool,
   type ThoughtData,
   type RunState,
 } from "./tool.js";
-
-const ParametersSchema = Type.Object(
-  {
-    thought: Type.String({ description: "Your current thinking step" }),
-    nextThoughtNeeded: Type.Boolean({
-      description: "Whether another thought step is needed",
-    }),
-    thoughtNumber: Type.Number({
-      description: "Current thought number (numeric value, e.g., 1, 2, 3)",
-    }),
-    totalThoughts: Type.Number({
-      description:
-        "Estimated total thoughts needed (numeric value, e.g., 5, 10)",
-    }),
-    isRevision: Type.Optional(
-      Type.Boolean({ description: "Whether this revises previous thinking" }),
-    ),
-    revisesThought: Type.Optional(
-      Type.Number({
-        description: "Which thought is being reconsidered",
-      }),
-    ),
-    branchFromThought: Type.Optional(
-      Type.Number({
-        description: "Branching point thought number",
-      }),
-    ),
-    branchId: Type.Optional(Type.String({ description: "Branch identifier" })),
-    needsMoreThoughts: Type.Optional(
-      Type.Boolean({ description: "If more thoughts are needed" }),
-    ),
-  },
-  { additionalProperties: false },
-);
 
 // Session state manager instance (replaces module-level Maps)
 const manager = new SessionStateManager();
@@ -104,17 +66,42 @@ Should:
 10. Provide a single, ideally correct answer as the final output
 11. Only set nextThoughtNeeded to false when truly done and a satisfactory answer is reached`;
 
-export function registerSequentialThinkingPlugin(api: OpenClawPluginApi): void {
-  const rawConfig = (api.pluginConfig ?? {}) as Record<string, unknown>;
-  const config = resolveConfig(rawConfig);
+const TOOL_PARAMETER_SCHEMA = Type.Object(
+  {
+    thought: Type.String({ description: "Your current thinking step" }),
+    nextThoughtNeeded: Type.Boolean({
+      description: "Whether another thought step is needed",
+    }),
+    thoughtNumber: Type.Number({
+      description: "Current thought number (numeric value, e.g., 1, 2, 3)",
+    }),
+    totalThoughts: Type.Number({
+      description:
+        "Estimated total thoughts needed (numeric value, e.g., 5, 10)",
+    }),
+    isRevision: Type.Optional(
+      Type.Boolean({ description: "Whether this revises previous thinking" }),
+    ),
+    revisesThought: Type.Optional(
+      Type.Number({
+        description: "Which thought is being reconsidered",
+      }),
+    ),
+    branchFromThought: Type.Optional(
+      Type.Number({
+        description: "Branching point thought number",
+      }),
+    ),
+    branchId: Type.Optional(Type.String({ description: "Branch identifier" })),
+    needsMoreThoughts: Type.Optional(
+      Type.Boolean({ description: "If more thoughts are needed" }),
+    ),
+  },
+  { additionalProperties: false },
+);
 
-  const logger = createSubsystemLogger("plugins/sequential-thinking");
-  logger.debug("registering sequential_thinking tool");
-
-  const toolInstance = new SequentialThinkingTool(config.thoughtLogging);
-
-  // Prompt injection for configured models: encourage preferring sequential-thinking
-  const PREFER_SEQUENTIAL_THINKING_CONTEXT = `There is a 'sequential_thinking' tool available.
+// Prompt injection for configured models: encourage preferring sequential-thinking
+const PREFER_SEQUENTIAL_THINKING_CONTEXT = `There is a 'sequential_thinking' tool available.
 When facing complex, ambiguous, or multi-step problems, strongly prefer using the 'sequential_thinking' tool to break down reasoning into structured steps.
 This includes:
 - Architecture or design decisions
@@ -122,6 +109,66 @@ This includes:
 - Planning migrations or refactors
 - Comparing multiple options with tradeoffs
 - Any problem where the full scope isn't clear at first glance`;
+
+export function registerSequentialThinkingPlugin(api: OpenClawPluginApi): void {
+  const rawConfig = (api.pluginConfig ?? {}) as Record<string, unknown>;
+  const config = resolveConfig(rawConfig);
+  const toolInstance = new SequentialThinkingTool(config.thoughtLogging);
+
+  api.registerTool({
+    name: "sequential_thinking",
+    label: "Sequential Thinking",
+    description: TOOL_DESCRIPTION,
+    parameters: TOOL_PARAMETER_SCHEMA,
+    executionMode: "sequential",
+    execute: async (toolCallId, params: ThoughtData, _signal, _onUpdate) => {
+      let state: RunState = {
+        thoughtHistory: [],
+        branches: {},
+      };
+
+      const existingState = manager.getStateByToolCallId(toolCallId);
+      if (existingState) {
+        state = existingState;
+      }
+
+      // Create local copy to prevent mutation of caller's params object
+      const input: ThoughtData = {
+        thought: params.thought,
+        thoughtNumber: params.thoughtNumber,
+        totalThoughts: params.totalThoughts,
+        nextThoughtNeeded: params.nextThoughtNeeded,
+        isRevision: params.isRevision,
+        revisesThought: params.revisesThought,
+        branchFromThought: params.branchFromThought,
+        branchId: params.branchId,
+        needsMoreThoughts: params.needsMoreThoughts,
+      };
+
+      const result = toolInstance.processThought(input, state);
+      if (result.isError) {
+        throw new Error(result.text);
+      }
+
+      const details = JSON.parse(result.text);
+      return {
+        content: [{ type: "text", text: result.text }],
+        details,
+      };
+    },
+  });
+  logger.debug("registered sequential_thinking tool");
+
+  if (api.registerSessionExtension) {
+    api.registerSessionExtension({
+      namespace: "sequential_thinking_state",
+      description: "SequentialThinking tool state",
+      cleanup: (ctx) => manager.getCleanupCallback()(ctx.reason),
+    });
+  }
+  logger.debug(
+    "registered sequential_thinking_state tool state session extension",
+  );
 
   api.on("before_prompt_build", async (_event, ctx) => {
     if (config.models && config.models.length > 0 && ctx.modelId) {
@@ -152,99 +199,55 @@ This includes:
 
   // Hook: capture sessionKey before tool execution and initialize per-session state
   api.on("before_tool_call", async (_event, ctx) => {
-    logger.debug(
-      `before_tool_call hook triggered, ctx: ${JSON.stringify(ctx)}`,
-    );
     if (
       ctx.toolName === "sequential_thinking" &&
       ctx.toolCallId &&
       ctx.sessionKey
     ) {
       manager.registerToolCall(ctx.toolCallId, ctx.sessionKey);
+      logger.debug(
+        `before_tool_call hook triggered, ctx: ${JSON.stringify(ctx)}`,
+      );
     }
     return undefined;
   });
 
   // Hook: clean up toolCallId mapping after execution
   api.on("after_tool_call", async (_event, ctx) => {
-    logger.debug(`after_tool_call hook triggered, ctx: ${JSON.stringify(ctx)}`);
     if (ctx.toolName === "sequential_thinking" && ctx.toolCallId) {
       manager.removeToolCallMapping(ctx.toolCallId);
+      logger.debug(
+        `after_tool_call hook triggered, ctx: ${JSON.stringify(ctx)}`,
+      );
     }
     return undefined;
   });
 
   // Hook: purge session state when message_sending
   api.on("message_sending", async (_event, ctx) => {
-    logger.debug(`message_sending hook triggered, ctx: ${JSON.stringify(ctx)}`);
-    if (ctx.sessionKey) manager.purgeSessionState(ctx.sessionKey);
+    if (ctx.sessionKey) {
+      manager.purgeSessionState(ctx.sessionKey);
+      logger.debug(
+        `message_sending hook triggered, ctx: ${JSON.stringify(ctx)}`,
+      );
+    }
   });
 
   // Fallback hook: purge on before_agent_reply (defensive)
   api.on("before_agent_reply", async (_event, ctx) => {
-    logger.debug(
-      `before_agent_reply hook triggered, ctx: ${JSON.stringify(ctx)}`,
-    );
-    if (ctx.sessionKey) manager.purgeSessionState(ctx.sessionKey);
+    if (ctx.sessionKey) {
+      manager.purgeSessionState(ctx.sessionKey);
+      logger.debug(
+        `before_agent_reply hook triggered, ctx: ${JSON.stringify(ctx)}`,
+      );
+    }
   });
 
   // Hook: purge session state when agent_end (defensive)
   api.on("agent_end", async (_event, ctx) => {
-    logger.debug(`agent_end hook triggered, ctx: ${JSON.stringify(ctx)}`);
-    if (ctx.sessionKey) manager.purgeSessionState(ctx.sessionKey);
+    if (ctx.sessionKey) {
+      manager.purgeSessionState(ctx.sessionKey);
+      logger.debug(`agent_end hook triggered, ctx: ${JSON.stringify(ctx)}`);
+    }
   });
-
-  const tool: AnyAgentTool = {
-    name: "sequential_thinking",
-    label: "Sequential Thinking",
-    description: TOOL_DESCRIPTION,
-    parameters: ParametersSchema,
-    executionMode: "sequential",
-    execute: async (toolCallId, params: ThoughtData, _signal, _onUpdate) => {
-      let state: RunState = {
-        thoughtHistory: [],
-        branches: {},
-      };
-
-      const existingState = manager.getStateByToolCallId(toolCallId);
-      if (existingState) {
-        state = existingState;
-      }
-
-      // Create local copy to prevent mutation of caller's params object
-      const input: ThoughtData = {
-        thought: params.thought,
-        thoughtNumber: params.thoughtNumber,
-        totalThoughts: params.totalThoughts,
-        nextThoughtNeeded: params.nextThoughtNeeded,
-        isRevision: params.isRevision,
-        revisesThought: params.revisesThought,
-        branchFromThought: params.branchFromThought,
-        branchId: params.branchId,
-        needsMoreThoughts: params.needsMoreThoughts,
-      };
-
-      const result = toolInstance.processThought(input, state);
-
-      if (result.isError) {
-        throw new Error(result.text);
-      }
-
-      const details = JSON.parse(result.text);
-      return {
-        content: [{ type: "text", text: result.text }],
-        details,
-      };
-    },
-  };
-
-  api.registerTool(tool);
-
-  if (api.registerSessionExtension) {
-    api.registerSessionExtension({
-      namespace: "sequential_thinking_state",
-      description: "Sequential thinking tool state",
-      cleanup: (ctx) => manager.getCleanupCallback()(ctx.reason),
-    });
-  }
 }

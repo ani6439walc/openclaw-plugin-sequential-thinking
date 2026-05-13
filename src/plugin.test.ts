@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { registerSequentialThinkingPlugin } from "./plugin.js";
 
 vi.mock("../api.js", () => ({
-  createSubsystemLogger: vi.fn(() => ({
+  logger: {
     debug: vi.fn(),
-  })),
+  },
 }));
 
 function createMockApi(overrides: Partial<MockApi> = {}): MockApi {
