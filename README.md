@@ -5,6 +5,8 @@
 
 A native OpenClaw plugin that provides the `sequential_thinking` tool for dynamic and reflective problem-solving — no MCP dependency required.
 
+> **Inspired by** the [MCP SequentialThinking server](https://github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking) — ported from the MCP protocol to run as a first-class OpenClaw plugin with per-session state isolation and model-targeted prompt injection.
+
 ## Concept
 
 This plugin registers a first-class `sequential_thinking` tool directly into the OpenClaw runtime via `api.registerTool`. It ports the original MCP `SequentialThinkingServer` logic to run natively inside the plugin, maintaining full compatibility with the original behavior:
@@ -14,11 +16,74 @@ This plugin registers a first-class `sequential_thinking` tool directly into the
 - Revision support
 - Dynamic `totalThoughts` adjustment
 
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     OpenClaw Runtime                        │
+│                                                             │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │              Plugin Entry (index.ts)                   │  │
+│  │  definePluginEntry({ register: registerSequential... })│  │
+│  └──────────────────────┬────────────────────────────────┘  │
+│                         │                                   │
+│  ┌──────────────────────▼────────────────────────────────┐  │
+│  │           Plugin Registration (plugin.ts)              │  │
+│  │                                                        │  │
+│  │  ┌────────────────┐    ┌──────────────────────────┐   │  │
+│  │  │ resolveConfig() │    │ SequentialThinkingTool   │   │  │
+│  │  │  (config.ts)    │    │  (tool.ts)               │   │  │
+│  │  └────────┬───────┘    │  - formatThought()       │   │  │
+│  │           │            │  - processThought()      │   │  │
+│  │           ▼            └──────────┬───────────────┘   │  │
+│  │  ┌──────────────────┐            │                    │  │
+│  │  │ 6 Lifecycle Hooks│◄───────────┘                    │  │
+│  │  │ - before_prompt  │                                 │  │
+│  │  │ - before_tool    │  ┌─────────────────────────┐   │  │
+│  │  │ - after_tool     │  │  Session State Maps     │   │  │
+│  │  │ - message_sending│  │ sessionKeyByToolCallId  │   │  │
+│  │  │ - before_agent   │  │ stateBySessionKey       │   │  │
+│  │  │ - agent_end      │  └─────────────────────────┘   │  │
+│  │  └──────────────────┘                                │  │
+│  └──────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Module Responsibilities
+
+| Module | Role |
+|---|---|
+| `index.ts` | Plugin entry point — exports `definePluginEntry` with registration function |
+| `api.ts` | Re-exports from `openclaw/plugin-sdk` (OpenClawPluginApi, AnyAgentTool, createSubsystemLogger) |
+| `src/config.ts` | Config type definition and `resolveConfig()` — parses raw plugin config with defaults |
+| `src/tool.ts` | `SequentialThinkingTool` class — core thought processing, formatting, and state mutation |
+| `src/plugin.ts` | Plugin registration — TypeBox schema, 6 lifecycle hooks, tool registration, prompt injection |
+
+### Lifecycle Hooks
+
+| Hook | Purpose |
+|---|---|
+| `before_prompt_build` | Injects `sequential_thinking` preference context for configured models |
+| `before_tool_call` | Captures `sessionKey` → `toolCallId` mapping, initializes per-session `RunState` |
+| `after_tool_call` | Cleans up `toolCallId` → `sessionKey` mapping |
+| `message_sending` | Purges session state before sending response |
+| `before_agent_reply` | Defensive purge — ensures no stale state carries over |
+| `agent_end` | Defensive purge — cleanup on session termination |
+
+### Session State Isolation
+
+Unlike the original MCP server which maintains global state, this plugin isolates thought history per OpenClaw session using two module-level Maps:
+
+- `sessionKeyByToolCallId`: Maps tool call IDs to session keys (for request correlation)
+- `stateBySessionKey`: Maps session keys to `RunState` objects (thoughtHistory + branches)
+
+State lifecycle: created on `before_tool_call` → used during `execute` → purged on `message_sending` / `before_agent_reply` / `agent_end`.
+
 ## How It Works
 
 1. **Tool Registration**: On plugin startup, `registerSequentialThinkingPlugin` creates a `SequentialThinkingTool` instance and registers it as an `AgentTool` via `api.registerTool`.
-2. **Agent Invocation**: When the agent decides to use `sequential_thinking`, the tool's `execute` method receives the thought parameters, validates them, and delegates to the server.
-3. **State Management**: The server maintains an in-memory thought history and branch registry for the lifetime of the plugin process.
+2. **Agent Invocation**: When the agent decides to use `sequential_thinking`, the tool's `execute` method receives the thought parameters, resolves the per-session state, and delegates to `processThought()`.
+3. **State Management**: Per-session `RunState` maintains thought history and branch registry, isolated by `sessionKey`.
 4. **Result Streaming**: The tool returns a JSON result with `thoughtNumber`, `totalThoughts`, `nextThoughtNeeded`, `branches`, and `thoughtHistoryLength`.
 
 ## Configuration
@@ -34,8 +99,8 @@ In `openclaw.json`:
         "config": {
           "thoughtLogging": true,
           "models": [
-            "claude-sonnet-4",
-            "anthropic/claude-opus-4",
+            "anthropic/claude-sonnet-4",
+            "google/gemini-3-flash-preview",
             "openai/gpt-4o"
           ]
         }
@@ -66,7 +131,33 @@ Facilitates a detailed, step-by-step thinking process for problem-solving and an
 ## Plugin Config
 
 - `thoughtLogging` (boolean, default: `true`): Log formatted thoughts to console
-- `models` (string[], default: `[]`): Model IDs that should receive a prompt injection encouraging preference for `sequential_thinking` on complex tasks. Supports exact `modelId` or `provider/modelId` patterns.
+- `models` (string[], default: `[]`): Model IDs that should receive a prompt injection encouraging preference for `sequential_thinking` on complex problems
+
+## Differences from MCP Original
+
+| Feature | MCP Server | OpenClaw Plugin |
+|---|---|---|
+| **Protocol** | MCP (`server.request`) | OpenClaw plugin API (`api.registerTool`) |
+| **State scope** | Global (single instance) | Per-session (isolated by `sessionKey`) |
+| **Configuration** | Environment variables (`DISABLE_THOUGHT_LOGGING`) | Plugin config (`thoughtLogging`, `models`) |
+| **Prompt injection** | None | `before_prompt_build` hook for targeted models |
+| **Session lifecycle** | N/A | 6 hooks for state init/cleanup |
+| **Response format** | `{ content: [...], isError? }` | `{ content: [...], details: parsed }` |
+
+## Development
+
+```bash
+pnpm install
+pnpm build          # tsc compilation
+pnpm typecheck      # tsc --noEmit
+pnpm test:unit      # vitest run
+pnpm test           # typecheck + test:unit
+pnpm format         # prettier
+```
+
+## License
+
+MIT
 
 ---
 
