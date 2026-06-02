@@ -8,11 +8,12 @@ export function resolveConfig(
 ): SequentialThinkingConfig {
   return {
     thoughtLogging:
-      raw.thoughtLogging != null ? Boolean(raw.thoughtLogging) : true,
+      typeof raw.thoughtLogging === "boolean" ? raw.thoughtLogging : true,
     models: Array.isArray(raw.models)
-      ? raw.models.filter(
-          (m): m is string => typeof m === "string" && m.length > 0,
-        )
+      ? raw.models
+          .filter((m): m is string => typeof m === "string")
+          .map((m) => m.trim())
+          .filter((m) => m.length > 0)
       : undefined,
   };
 }

@@ -37,7 +37,7 @@ This plugin registers a first-class `sequential_thinking` tool directly into the
 │  │           │            │  - processThought()      │   │  │
 │  │           ▼            │  - input validation      │   │  │
 │  │  ┌──────────────────┐  └──────────┬───────────────┘   │  │
-│  │  │ 6 Lifecycle Hooks│◄────────────┘                   │  │
+│  │  │    SDK Hooks     │◄────────────┘                   │  │
 │  │  │ - before_prompt  │                                 │  │
 │  │  │ - before_tool    │  ┌──────────────────────────┐   │  │
 │  │  │ - after_tool     │  │ SessionStateManager      │   │  │
@@ -50,7 +50,7 @@ This plugin registers a first-class `sequential_thinking` tool directly into the
 │  │                                   │                   │  │
 │  │  ┌────────────────────────────────▼────────────────┐  │  │
 │  │  │          SDK Session Extension                  │  │  │
-│  │  │  registerSessionExtension({                     │  │  │
+│  │  │  session.state.registerSessionExtension({       │  │  │
 │  │  │    namespace: "sequential_thinking_state",      │  │  │
 │  │  │    cleanup: manager.getCleanupCallback()        │  │  │
 │  │  │  })                                             │  │  │
@@ -61,37 +61,48 @@ This plugin registers a first-class `sequential_thinking` tool directly into the
 
 ### Module Responsibilities
 
-| Module          | Role                                                                                           |
-| --------------- | ---------------------------------------------------------------------------------------------- |
-| `index.ts`      | Plugin entry point — exports `definePluginEntry` with registration function                    |
-| `api.ts`        | Re-exports from `openclaw/plugin-sdk` (OpenClawPluginApi, AnyAgentTool, createSubsystemLogger) |
-| `src/config.ts` | Config type definition and `resolveConfig()` — parses raw plugin config with defaults          |
-| `src/tool.ts`   | `SequentialThinkingTool` class — core thought processing with input validation & no mutation   |
-| `src/state.ts`  | `SessionStateManager` class — encapsulated state lifecycle with SDK cleanup integration        |
-| `src/plugin.ts` | Plugin registration — TypeBox schema, 6 lifecycle hooks, tool registration, prompt injection   |
+| Module                 | Role                                                                                           |
+| ---------------------- | ---------------------------------------------------------------------------------------------- |
+| `index.ts`             | Plugin entry point — exports `definePluginEntry` with registration function                    |
+| `api.ts`               | Re-exports from `openclaw/plugin-sdk` (OpenClawPluginApi, AnyAgentTool, createSubsystemLogger) |
+| `src/config.ts`        | Config type definition and `resolveConfig()` — parses raw plugin config with defaults          |
+| `src/schema.ts`        | TypeBox schema for the public `sequential_thinking` tool input contract                        |
+| `src/tool-metadata.ts` | Tool description and prompt-injection system context                                           |
+| `src/tool.ts`          | `SequentialThinkingTool` class — core thought processing with input validation & no mutation   |
+| `src/state.ts`         | `SessionStateManager` class — encapsulated state lifecycle with SDK cleanup integration        |
+| `src/plugin.ts`        | Plugin orchestration — resolves config, registers tool, session extension, and SDK hooks       |
 
 ### Lifecycle Hooks
 
-| Hook                  | Purpose                                                                                                    |
-| --------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `before_prompt_build` | Injects `sequential_thinking` preference context for configured models                                     |
-| `before_tool_call`    | Captures `sessionKey` → `toolCallId` mapping, initializes per-session `RunState` via `SessionStateManager` |
-| `after_tool_call`     | Cleans up `toolCallId` → `sessionKey` mapping via manager                                                  |
-| `message_sending`     | Purges session state via `manager.purgeSessionState()`                                                     |
-| `before_agent_reply`  | Defensive purge — ensures no stale state carries over                                                      |
-| `agent_end`           | Defensive purge — cleanup on session termination                                                           |
+| Hook                  | Purpose                                                                                                                                   |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `before_prompt_build` | Uses `event.prompt`, `event.messages`, hook-time config, and model context to inject `sequential_thinking` preference context when needed |
+| `before_tool_call`    | Uses `event.toolName`, `event.toolCallId`, and `ctx.sessionKey` to map tool calls to per-session state                                    |
+| `after_tool_call`     | Uses `event.toolName` and `event.toolCallId` to remove only the tool-call mapping; session history stays available until session cleanup  |
+| `message_sending`     | Uses message context `sessionKey` to purge session state without changing outgoing content                                                |
+| `before_agent_reply`  | Defensive purge by `sessionKey`; does not synthesize or replace the reply                                                                 |
+| `agent_end`           | Observation-only run cleanup by `sessionKey`                                                                                              |
 
-Additionally, the SDK's `registerSessionExtension` cleanup callback handles `delete`, `reset`, `disable`, and `restart` lifecycle events automatically.
+Additionally, the SDK's `api.session.state.registerSessionExtension` cleanup callback handles `delete`, `reset`, `disable`, and `restart` lifecycle events automatically.
 
 ### Session State Isolation
 
 Unlike the original MCP server which maintains global state, this plugin isolates thought history per OpenClaw session using the `SessionStateManager` class:
 
 - **Encapsulated Maps**: `sessionKeyByToolCallId` and `stateBySessionKey` are managed internally
-- **SDK Lifecycle Integration**: Registered via `api.registerSessionExtension()` with cleanup callbacks for `delete`, `reset`, `disable`, and `restart` events
+- **SDK Lifecycle Integration**: Registered via `api.session.state.registerSessionExtension()` with cleanup callbacks for `delete`, `reset`, `disable`, and `restart` events
 - **Execute Bridge**: In-memory state is required for the `execute` function (tool callbacks have no `ctx` access), but cleanup is SDK-driven
 
-State lifecycle: created on `before_tool_call` → used during `execute` → purged on SDK cleanup or explicit hook calls (`message_sending` / `before_agent_reply` / `agent_end`).
+State lifecycle: mapped on `before_tool_call` → used during `execute` → tool-call mapping removed on `after_tool_call` → session history purged on SDK cleanup or explicit hook calls (`message_sending` / `before_agent_reply` / `agent_end`).
+
+### SDK Alignment
+
+This plugin is built and tested against `openclaw@2026.5.28`.
+
+- Uses `definePluginEntry` because the plugin needs tool registration, SDK hooks, prompt injection, and session state lifecycle integration.
+- Uses the grouped `api.session.state.registerSessionExtension(...)` API introduced in the current SDK surface.
+- Keeps `activation.onStartup: true` so prompt-injection hooks are registered before agents build prompts.
+- Keeps `after_tool_call` scoped to mapping cleanup only; message/run/session cleanup owns thought history purging.
 
 ## How It Works
 
@@ -151,16 +162,16 @@ Facilitates a detailed, step-by-step thinking process for problem-solving and an
 
 ## Differences from MCP Original
 
-| Feature               | MCP Server                                        | OpenClaw Plugin                                             |
-| --------------------- | ------------------------------------------------- | ----------------------------------------------------------- |
-| **Protocol**          | MCP (`server.request`)                            | OpenClaw plugin API (`api.registerTool`)                    |
-| **State scope**       | Global (single instance)                          | Per-session (isolated by `sessionKey`)                      |
-| **Configuration**     | Environment variables (`DISABLE_THOUGHT_LOGGING`) | Plugin config (`thoughtLogging`, `models`)                  |
-| **Prompt injection**  | None                                              | `before_prompt_build` hook for targeted models              |
-| **Session lifecycle** | N/A                                               | SDK `registerSessionExtension` cleanup + 6 hooks            |
-| **Response format**   | `{ content: [...], isError? }`                    | `{ content: [...], details: parsed }`                       |
-| **Input validation**  | None                                              | Validates `thoughtNumber`, `totalThoughts`, `thought`       |
-| **Type safety**       | N/A                                               | Strict equality, no `as any`, `additionalProperties: false` |
+| Feature               | MCP Server                                        | OpenClaw Plugin                                              |
+| --------------------- | ------------------------------------------------- | ------------------------------------------------------------ |
+| **Protocol**          | MCP (`server.request`)                            | OpenClaw plugin API (`api.registerTool`)                     |
+| **State scope**       | Global (single instance)                          | Per-session (isolated by `sessionKey`)                       |
+| **Configuration**     | Environment variables (`DISABLE_THOUGHT_LOGGING`) | Plugin config (`thoughtLogging`, `models`)                   |
+| **Prompt injection**  | None                                              | `before_prompt_build` hook for targeted models               |
+| **Session lifecycle** | N/A                                               | SDK `session.state.registerSessionExtension` cleanup + hooks |
+| **Response format**   | `{ content: [...], isError? }`                    | `{ content: [...], details: parsed }`                        |
+| **Input validation**  | None                                              | Validates `thoughtNumber`, `totalThoughts`, `thought`        |
+| **Type safety**       | N/A                                               | Strict equality, no `as any`, `additionalProperties: false`  |
 
 ## Development
 
@@ -168,7 +179,7 @@ Facilitates a detailed, step-by-step thinking process for problem-solving and an
 pnpm install
 pnpm build          # tsc compilation
 pnpm typecheck      # tsc --noEmit
-pnpm test:unit      # vitest run (76 tests across 4 files)
+pnpm test:unit      # vitest run (78 tests across 4 files)
 pnpm test           # typecheck + test:unit
 pnpm format         # prettier
 ```
@@ -178,7 +189,7 @@ pnpm format         # prettier
 - `src/config.test.ts` — Config resolution, defaults, model filtering, empty string handling
 - `src/tool.test.ts` — SequentialThinkingTool: constructor, processThought (history, branches, revisions, validation), formatThought
 - `src/state.test.ts` — SessionStateManager: lifecycle methods, session isolation, SDK cleanup callback
-- `src/plugin.test.ts` — Plugin registration: hooks (6 lifecycle), tool schema, execute, prompt injection, session state
+- `src/plugin.test.ts` — Plugin registration: SDK hooks, grouped session extension, tool schema, execute bridge, prompt injection, session state
 
 ## License
 

@@ -7,20 +7,66 @@ vi.mock("../api.js", () => ({
   },
 }));
 
+type HookHandler = (
+  event: Record<string, unknown>,
+  ctx: HookContext,
+) => unknown;
+
+interface HookContext {
+  agentId?: string;
+  modelId?: string;
+  modelProviderId?: string;
+  pluginConfig?: Record<string, unknown>;
+  runId?: string;
+  sessionKey?: string;
+  toolCallId?: string;
+  toolName?: string;
+}
+
+interface MockApi {
+  pluginConfig: Record<string, unknown>;
+  on: ReturnType<typeof vi.fn>;
+  registerSessionExtension: ReturnType<typeof vi.fn>;
+  registerTool: ReturnType<typeof vi.fn>;
+  session: {
+    state: {
+      registerSessionExtension: ReturnType<typeof vi.fn>;
+    };
+  };
+  _hooks: Record<string, HookHandler[]>;
+  _emit: (
+    hookName: string,
+    event?: Record<string, unknown>,
+    ctx?: HookContext,
+  ) => Promise<unknown[]>;
+}
+
 function createMockApi(overrides: Partial<MockApi> = {}): MockApi {
-  const hooks: Record<string, Array<(...args: any[]) => any>> = {};
+  const hooks: Record<string, HookHandler[]> = {};
+  const registerSessionExtension = vi.fn();
+
   return {
     pluginConfig: overrides.pluginConfig ?? {},
-    on: vi.fn((event: string, handler: (...args: any[]) => any) => {
+    on: vi.fn((event: string, handler: HookHandler) => {
       if (!hooks[event]) hooks[event] = [];
       hooks[event].push(handler);
     }),
+    registerSessionExtension: vi.fn(),
     registerTool: vi.fn(),
+    session: {
+      state: {
+        registerSessionExtension,
+      },
+    },
     _hooks: hooks,
-    _emit: async (event: string, ctx: any) => {
-      const results: any[] = [];
-      if (hooks[event]) {
-        for (const handler of hooks[event]) {
+    _emit: async (
+      hookName: string,
+      event: Record<string, unknown> = {},
+      ctx: HookContext = {},
+    ) => {
+      const results: unknown[] = [];
+      if (hooks[hookName]) {
+        for (const handler of hooks[hookName]) {
           results.push(await handler(event, ctx));
         }
       }
@@ -28,14 +74,6 @@ function createMockApi(overrides: Partial<MockApi> = {}): MockApi {
     },
     ...overrides,
   };
-}
-
-interface MockApi {
-  pluginConfig: Record<string, unknown>;
-  on: ReturnType<typeof vi.fn>;
-  registerTool: ReturnType<typeof vi.fn>;
-  _hooks: Record<string, Array<(...args: any[]) => any>>;
-  _emit: (event: string, ...args: any[]) => Promise<void>;
 }
 
 describe("registerSequentialThinkingPlugin", () => {
@@ -50,7 +88,7 @@ describe("registerSequentialThinkingPlugin", () => {
     vi.restoreAllMocks();
   });
 
-  it("registers hooks on plugin registration", () => {
+  it("registers SDK hooks on plugin registration", () => {
     registerSequentialThinkingPlugin(mockApi as any);
 
     expect(mockApi.on).toHaveBeenCalledWith(
@@ -59,6 +97,10 @@ describe("registerSequentialThinkingPlugin", () => {
     );
     expect(mockApi.on).toHaveBeenCalledWith(
       "before_tool_call",
+      expect.any(Function),
+    );
+    expect(mockApi.on).toHaveBeenCalledWith(
+      "after_tool_call",
       expect.any(Function),
     );
     expect(mockApi.on).toHaveBeenCalledWith(
@@ -72,6 +114,20 @@ describe("registerSequentialThinkingPlugin", () => {
     expect(mockApi.on).toHaveBeenCalledWith("agent_end", expect.any(Function));
   });
 
+  it("registers session cleanup through the grouped SDK API", () => {
+    registerSequentialThinkingPlugin(mockApi as any);
+
+    expect(
+      mockApi.session.state.registerSessionExtension,
+    ).toHaveBeenCalledTimes(1);
+    expect(mockApi.registerSessionExtension).not.toHaveBeenCalled();
+
+    const extension =
+      mockApi.session.state.registerSessionExtension.mock.calls[0][0];
+    expect(extension.namespace).toBe("sequential_thinking_state");
+    expect(extension.cleanup).toEqual(expect.any(Function));
+  });
+
   it("registers the sequential_thinking tool", () => {
     registerSequentialThinkingPlugin(mockApi as any);
 
@@ -82,18 +138,20 @@ describe("registerSequentialThinkingPlugin", () => {
     expect(tool.executionMode).toBe("sequential");
   });
 
-  it("tool has correct schema properties", () => {
+  it("tool has schema properties aligned with runtime validation", () => {
     registerSequentialThinkingPlugin(mockApi as any);
 
     const tool = mockApi.registerTool.mock.calls[0][0];
     expect(tool.description).toContain(
       "dynamic and reflective problem-solving",
     );
-    expect(tool.description).toContain("thought");
-    expect(tool.description).toContain("nextThoughtNeeded");
-    expect(tool.description).toContain("thoughtNumber");
-    expect(tool.description).toContain("totalThoughts");
     expect(tool.parameters.additionalProperties).toBe(false);
+    expect(tool.parameters.properties.thoughtNumber.type).toBe("integer");
+    expect(tool.parameters.properties.thoughtNumber.minimum).toBe(1);
+    expect(tool.parameters.properties.totalThoughts.type).toBe("integer");
+    expect(tool.parameters.properties.totalThoughts.minimum).toBe(1);
+    expect(tool.parameters.properties.revisesThought.type).toBe("integer");
+    expect(tool.parameters.properties.branchFromThought.type).toBe("integer");
   });
 
   it("tool execute processes thoughts correctly", async () => {
@@ -123,35 +181,92 @@ describe("registerSequentialThinkingPlugin", () => {
     expect(parsed.thoughtHistoryLength).toBe(1);
   });
 
-  it("tool execute maintains state across calls without sessionKey", async () => {
+  it("isolates state by SDK session and removes only tool-call mapping after execution", async () => {
+    registerSequentialThinkingPlugin(mockApi as any);
+
+    const tool = mockApi.registerTool.mock.calls[0][0];
+    await emitToolLifecycleStart(mockApi, "call-1", "session-a");
+    await tool.execute("call-1", makeThought(1), abortSignal(), vi.fn());
+    await mockApi._emit(
+      "after_tool_call",
+      {
+        toolName: "sequential_thinking",
+        params: makeThought(1),
+        toolCallId: "call-1",
+      },
+      {
+        toolName: "sequential_thinking",
+        toolCallId: "call-1",
+        sessionKey: "session-a",
+      },
+    );
+
+    await emitToolLifecycleStart(mockApi, "call-2", "session-a");
+    const secondResult = await tool.execute(
+      "call-2",
+      makeThought(2),
+      abortSignal(),
+      vi.fn(),
+    );
+    expect(JSON.parse(secondResult.content[0].text).thoughtHistoryLength).toBe(
+      2,
+    );
+
+    await emitToolLifecycleStart(mockApi, "call-3", "session-b");
+    const otherSessionResult = await tool.execute(
+      "call-3",
+      makeThought(1),
+      abortSignal(),
+      vi.fn(),
+    );
+    expect(
+      JSON.parse(otherSessionResult.content[0].text).thoughtHistoryLength,
+    ).toBe(1);
+  });
+
+  it("falls back to per-call state when no session mapping exists", async () => {
     registerSequentialThinkingPlugin(mockApi as any);
 
     const tool = mockApi.registerTool.mock.calls[0][0];
     await tool.execute("call-1", makeThought(1), abortSignal(), vi.fn());
     await tool.execute("call-2", makeThought(2), abortSignal(), vi.fn());
-    await tool.execute("call-3", makeThought(3), abortSignal(), vi.fn());
 
     const result = await tool.execute(
-      "call-4",
-      makeThought(4),
+      "call-3",
+      makeThought(3),
       abortSignal(),
       vi.fn(),
     );
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.thoughtHistoryLength).toBe(1);
+    expect(JSON.parse(result.content[0].text).thoughtHistoryLength).toBe(1);
   });
 
-  it("before_prompt_build injects context for configured models", async () => {
+  it("before_prompt_build injects context for configured models from hook context", async () => {
+    registerSequentialThinkingPlugin(mockApi as any);
+
+    const results = await mockApi._emit(
+      "before_prompt_build",
+      { prompt: "plan this", messages: [] },
+      {
+        modelId: "claude-sonnet-4",
+        modelProviderId: "anthropic",
+        pluginConfig: { models: ["claude-sonnet-4"] },
+      },
+    );
+
+    expect(results.some((r: any) => r?.appendSystemContext)).toBe(true);
+  });
+
+  it("before_prompt_build falls back to registration config", async () => {
     mockApi = createMockApi({
       pluginConfig: { models: ["claude-sonnet-4"] },
     });
     registerSequentialThinkingPlugin(mockApi as any);
 
-    const ctx = {
-      modelId: "claude-sonnet-4",
-      modelProviderId: "anthropic",
-    };
-    const results = await mockApi._emit("before_prompt_build", ctx);
+    const results = await mockApi._emit(
+      "before_prompt_build",
+      { prompt: "plan this", messages: [] },
+      { modelId: "claude-sonnet-4", modelProviderId: "anthropic" },
+    );
 
     expect(results.some((r: any) => r?.appendSystemContext)).toBe(true);
   });
@@ -162,58 +277,60 @@ describe("registerSequentialThinkingPlugin", () => {
     });
     registerSequentialThinkingPlugin(mockApi as any);
 
-    const ctx = {
-      modelId: "gpt-4o",
-      modelProviderId: "openai",
-    };
-    const results = await mockApi._emit("before_prompt_build", ctx);
+    const results = await mockApi._emit(
+      "before_prompt_build",
+      { prompt: "plan this", messages: [] },
+      { modelId: "gpt-4o", modelProviderId: "openai" },
+    );
 
     expect(results.every((r: any) => r === undefined)).toBe(true);
-  });
-
-  it("before_tool_call initializes session state for sequential_thinking", async () => {
-    registerSequentialThinkingPlugin(mockApi as any);
-
-    const ctx = {
-      toolName: "sequential_thinking",
-      toolCallId: "call-123",
-      sessionKey: "session-abc",
-    };
-    await mockApi._emit("before_tool_call", ctx);
-
-    expect(ctx.sessionKey).toBeDefined();
   });
 
   it("before_tool_call ignores non-sequential_thinking tools", async () => {
     registerSequentialThinkingPlugin(mockApi as any);
 
-    const ctx = {
-      toolName: "other_tool",
-      toolCallId: "call-456",
-      sessionKey: "session-xyz",
-    };
-    await mockApi._emit("before_tool_call", ctx);
+    await mockApi._emit(
+      "before_tool_call",
+      { toolName: "other_tool", params: {}, toolCallId: "call-456" },
+      {
+        toolName: "other_tool",
+        toolCallId: "call-456",
+        sessionKey: "session-xyz",
+      },
+    );
   });
 
   it("message_sending purges session state", async () => {
-    registerSequentialThinkingPlugin(mockApi as any);
-
-    const ctx = { sessionKey: "session-purge" };
-    await mockApi._emit("message_sending", ctx);
+    await expectSessionPurgeFromHook(mockApi, "message_sending");
   });
 
   it("before_agent_reply purges session state", async () => {
-    registerSequentialThinkingPlugin(mockApi as any);
-
-    const ctx = { sessionKey: "session-purge-2" };
-    await mockApi._emit("before_agent_reply", ctx);
+    await expectSessionPurgeFromHook(mockApi, "before_agent_reply");
   });
 
   it("agent_end purges session state", async () => {
-    registerSequentialThinkingPlugin(mockApi as any);
+    await expectSessionPurgeFromHook(mockApi, "agent_end");
+  });
 
-    const ctx = { sessionKey: "session-purge-3" };
-    await mockApi._emit("agent_end", ctx);
+  it("session extension cleanup purges all session state", async () => {
+    registerSequentialThinkingPlugin(mockApi as any);
+    const tool = mockApi.registerTool.mock.calls[0][0];
+
+    await emitToolLifecycleStart(mockApi, "call-1", "session-a");
+    await tool.execute("call-1", makeThought(1), abortSignal(), vi.fn());
+
+    const extension =
+      mockApi.session.state.registerSessionExtension.mock.calls[0][0];
+    extension.cleanup({ reason: "reset" });
+
+    await emitToolLifecycleStart(mockApi, "call-2", "session-a");
+    const result = await tool.execute(
+      "call-2",
+      makeThought(2),
+      abortSignal(),
+      vi.fn(),
+    );
+    expect(JSON.parse(result.content[0].text).thoughtHistoryLength).toBe(1);
   });
 
   it("respects thoughtLogging config", async () => {
@@ -245,6 +362,58 @@ describe("registerSequentialThinkingPlugin", () => {
     ).rejects.toThrow();
   });
 });
+
+async function emitToolLifecycleStart(
+  api: MockApi,
+  toolCallId: string,
+  sessionKey: string,
+) {
+  await api._emit(
+    "before_tool_call",
+    { toolName: "sequential_thinking", params: makeThought(1), toolCallId },
+    { toolName: "sequential_thinking", toolCallId, sessionKey },
+  );
+}
+
+async function expectSessionPurgeFromHook(api: MockApi, hookName: string) {
+  registerSequentialThinkingPlugin(api as any);
+  const tool = api.registerTool.mock.calls[0][0];
+
+  await emitToolLifecycleStart(api, "call-1", "session-purge");
+  await tool.execute("call-1", makeThought(1), abortSignal(), vi.fn());
+  await emitToolLifecycleStart(api, "call-2", "session-purge");
+  const beforePurge = await tool.execute(
+    "call-2",
+    makeThought(2),
+    abortSignal(),
+    vi.fn(),
+  );
+  expect(JSON.parse(beforePurge.content[0].text).thoughtHistoryLength).toBe(2);
+
+  await api._emit(hookName, eventForHook(hookName), {
+    sessionKey: "session-purge",
+    runId: "run-1",
+  });
+
+  await emitToolLifecycleStart(api, "call-3", "session-purge");
+  const afterPurge = await tool.execute(
+    "call-3",
+    makeThought(3),
+    abortSignal(),
+    vi.fn(),
+  );
+  expect(JSON.parse(afterPurge.content[0].text).thoughtHistoryLength).toBe(1);
+}
+
+function eventForHook(hookName: string): Record<string, unknown> {
+  if (hookName === "message_sending") {
+    return { to: "user", content: "reply" };
+  }
+  if (hookName === "before_agent_reply") {
+    return { cleanedBody: "reply" };
+  }
+  return { runId: "run-1", messages: [], success: true };
+}
 
 function makeThought(num: number) {
   return {

@@ -24,9 +24,10 @@ describe("resolveConfig", () => {
     expect(result.thoughtLogging).toBe(false);
   });
 
-  it("sets thoughtLogging to false for falsy values like 0 and empty string", () => {
-    expect(resolveConfig({ thoughtLogging: 0 }).thoughtLogging).toBe(false);
-    expect(resolveConfig({ thoughtLogging: "" }).thoughtLogging).toBe(false);
+  it("defaults thoughtLogging to true for non-boolean values", () => {
+    expect(resolveConfig({ thoughtLogging: 0 }).thoughtLogging).toBe(true);
+    expect(resolveConfig({ thoughtLogging: "" }).thoughtLogging).toBe(true);
+    expect(resolveConfig({ thoughtLogging: "yes" }).thoughtLogging).toBe(true);
   });
 
   it("defaults thoughtLogging to true for null and undefined", () => {
@@ -34,11 +35,6 @@ describe("resolveConfig", () => {
     expect(resolveConfig({ thoughtLogging: undefined }).thoughtLogging).toBe(
       true,
     );
-  });
-
-  it("sets thoughtLogging to true for truthy values like 1 and 'yes'", () => {
-    expect(resolveConfig({ thoughtLogging: 1 }).thoughtLogging).toBe(true);
-    expect(resolveConfig({ thoughtLogging: "yes" }).thoughtLogging).toBe(true);
   });
 
   it("returns models as undefined when not provided", () => {
@@ -60,9 +56,16 @@ describe("resolveConfig", () => {
     expect(result.models).toEqual(["claude-sonnet-4", "gpt-4o", "opus"]);
   });
 
-  it("filters empty strings from models", () => {
+  it("filters empty and whitespace-only strings from models", () => {
     const result = resolveConfig({
-      models: ["gpt-4", "", "claude"],
+      models: ["gpt-4", "", "   ", "claude"],
+    });
+    expect(result.models).toEqual(["gpt-4", "claude"]);
+  });
+
+  it("trims model identifiers", () => {
+    const result = resolveConfig({
+      models: [" gpt-4 ", "\tclaude\n"],
     });
     expect(result.models).toEqual(["gpt-4", "claude"]);
   });
