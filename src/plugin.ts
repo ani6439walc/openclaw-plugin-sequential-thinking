@@ -12,6 +12,7 @@ import {
 
 const TOOL_NAME = "sequential_thinking";
 const STATE_NAMESPACE = "sequential_thinking_state";
+const manager = new SessionStateManager();
 
 type SessionExtensionRegistration = Parameters<
   OpenClawPluginApi["session"]["state"]["registerSessionExtension"]
@@ -19,7 +20,6 @@ type SessionExtensionRegistration = Parameters<
 
 export function registerSequentialThinkingPlugin(api: OpenClawPluginApi): void {
   const registrationConfig = resolveConfig(api.pluginConfig ?? {});
-  const manager = new SessionStateManager();
   const toolInstance = new SequentialThinkingTool(
     registrationConfig.thoughtLogging,
   );

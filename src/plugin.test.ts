@@ -85,6 +85,7 @@ describe("registerSequentialThinkingPlugin", () => {
   });
 
   afterEach(() => {
+    cleanupRegisteredSessionState(mockApi);
     vi.restoreAllMocks();
   });
 
@@ -222,6 +223,64 @@ describe("registerSequentialThinkingPlugin", () => {
     expect(
       JSON.parse(otherSessionResult.content[0].text).thoughtHistoryLength,
     ).toBe(1);
+  });
+
+  it("preserves session state if plugin registration is recreated mid-run", async () => {
+    registerSequentialThinkingPlugin(mockApi as any);
+
+    const tool = mockApi.registerTool.mock.calls[0][0];
+    await emitToolLifecycleStart(
+      mockApi,
+      "call-reregister-1",
+      "session-reregister",
+    );
+    await tool.execute(
+      "call-reregister-1",
+      makeThought(1),
+      abortSignal(),
+      vi.fn(),
+    );
+    await mockApi._emit(
+      "after_tool_call",
+      {
+        toolName: "sequential_thinking",
+        params: makeThought(1),
+        toolCallId: "call-reregister-1",
+      },
+      {
+        toolName: "sequential_thinking",
+        toolCallId: "call-reregister-1",
+        sessionKey: "session-reregister",
+      },
+    );
+
+    const reloadedApi = createMockApi();
+    registerSequentialThinkingPlugin(reloadedApi as any);
+
+    const reloadedTool = reloadedApi.registerTool.mock.calls[0][0];
+    await emitToolLifecycleStart(
+      reloadedApi,
+      "call-reregister-2",
+      "session-reregister",
+    );
+    const secondResult = await reloadedTool.execute(
+      "call-reregister-2",
+      makeThought(2),
+      abortSignal(),
+      vi.fn(),
+    );
+
+    expect(JSON.parse(secondResult.content[0].text).thoughtHistoryLength).toBe(
+      2,
+    );
+
+    await reloadedApi._emit(
+      "message_sending",
+      eventForHook("message_sending"),
+      {
+        sessionKey: "session-reregister",
+      },
+    );
   });
 
   it("falls back to per-call state when no session mapping exists", async () => {
@@ -413,6 +472,12 @@ function eventForHook(hookName: string): Record<string, unknown> {
     return { cleanedBody: "reply" };
   }
   return { runId: "run-1", messages: [], success: true };
+}
+
+function cleanupRegisteredSessionState(api: MockApi | undefined) {
+  const extension =
+    api?.session.state.registerSessionExtension.mock.calls.at(-1)?.[0];
+  extension?.cleanup?.({ reason: "reset" });
 }
 
 function makeThought(num: number) {
