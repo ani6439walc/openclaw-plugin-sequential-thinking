@@ -53,11 +53,30 @@ Should:
 10. Provide a single, ideally correct answer as the final output
 11. Only set nextThoughtNeeded to false when truly done and a satisfactory answer is reached`;
 
-export const PREFER_SEQUENTIAL_THINKING_CONTEXT = `There is a 'sequential_thinking' tool available.
-When facing complex, ambiguous, or multi-step problems, strongly prefer using the 'sequential_thinking' tool to break down reasoning into structured steps.
-This includes:
+export const PREFER_SEQUENTIAL_THINKING_CONTEXT = `<tool_usage_hint>
+There is a \`sequential_thinking\` tool available for structured reasoning.
+
+**When to use it:**
+Use this tool whenever the problem cannot be solved in a single reasoning pass. Specifically:
 - Architecture or design decisions
-- Debugging tricky issues
-- Planning migrations or refactors
-- Comparing multiple options with tradeoffs
-- Any problem where the full scope isn't clear at first glance`;
+- Debugging tricky or intermittent issues
+- Planning migrations, refactors, or multi-step implementations
+- Comparing options with non-obvious tradeoffs
+- Ambiguous requirements where clarification is needed before acting
+- Interpreting error logs with multiple cascading failures
+- Security or hardening decisions with conflicting constraints
+- Test planning with multiple branches or edge-case scenarios
+- Estimating scope, timeline, or resource allocation
+- Root cause analysis where the symptom ≠ the actual problem
+- Translating vague user requests into actionable technical steps
+- Multi-layer dependency issues (e.g., config → code → infra → network)
+- When you catch yourself making assumptions that need verification
+
+**When NOT to use it:**
+- Simple factual questions or single-step operations
+- Tasks where the answer is already known from context
+- Trivial clarifying questions
+
+**Why it matters:**
+Sequential thinking prevents reasoning collapse on multi-step problems by maintaining explicit context across thought steps, allowing revision and branching mid-analysis.
+</tool_usage_hint>`;

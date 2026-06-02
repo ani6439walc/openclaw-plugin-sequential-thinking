@@ -1,4 +1,4 @@
-import { type OpenClawPluginApi, logger } from "../api.js";
+import { type OpenClawPluginApi } from "../api.js";
 import { resolveConfig } from "./config.js";
 import { createHookHandlers } from "./hooks.js";
 import { TOOL_PARAMETER_SCHEMA } from "./schema.js";
@@ -11,7 +11,7 @@ import {
 } from "./tool.js";
 
 const TOOL_NAME = "sequential_thinking";
-const STATE_NAMESPACE = "sequential_thinking_state";
+const TOOL_LABEL = "Sequential Thinking";
 const manager = new SessionStateManager();
 
 type SessionExtensionRegistration = Parameters<
@@ -26,7 +26,7 @@ export function registerSequentialThinkingPlugin(api: OpenClawPluginApi): void {
 
   api.registerTool({
     name: TOOL_NAME,
-    label: "Sequential Thinking",
+    label: TOOL_LABEL,
     description: TOOL_DESCRIPTION,
     parameters: TOOL_PARAMETER_SCHEMA,
     executionMode: "sequential",
@@ -84,8 +84,8 @@ function createSessionExtension(
   manager: SessionStateManager,
 ): SessionExtensionRegistration {
   return {
-    namespace: STATE_NAMESPACE,
-    description: "SequentialThinking tool state",
+    namespace: TOOL_NAME,
+    description: TOOL_LABEL,
     cleanup: (ctx) => manager.getCleanupCallback()(ctx.reason),
   };
 }

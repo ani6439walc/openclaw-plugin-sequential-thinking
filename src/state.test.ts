@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { SessionStateManager } from "./state.js";
-import { RunState, ThoughtData } from "./tool.js";
 
 describe("SessionStateManager", () => {
   let manager: SessionStateManager;
@@ -11,7 +10,7 @@ describe("SessionStateManager", () => {
 
   describe("registerToolCall + getOrCreateState", () => {
     it("registers a tool call and creates state for session", () => {
-      manager.registerToolCall("t1", "session1");
+      manager.registerToolCall("session1", "t1");
 
       const state = manager.getOrCreateState("session1");
       expect(state).toBeDefined();
@@ -29,7 +28,7 @@ describe("SessionStateManager", () => {
 
   describe("getStateByToolCallId", () => {
     it("returns full RunState including thoughtHistory and branches", () => {
-      manager.registerToolCall("t1", "session1");
+      manager.registerToolCall("session1", "t1");
       const state = manager.getStateByToolCallId("t1");
 
       expect(state).toBeDefined();
@@ -45,7 +44,7 @@ describe("SessionStateManager", () => {
     });
 
     it("returns undefined after tool call mapping is removed", () => {
-      manager.registerToolCall("t1", "session1");
+      manager.registerToolCall("session1", "t1");
       manager.removeToolCallMapping("t1");
 
       const state = manager.getStateByToolCallId("t1");
@@ -55,7 +54,7 @@ describe("SessionStateManager", () => {
 
   describe("removeToolCallMapping", () => {
     it("removes the mapping between tool call id and session key", () => {
-      manager.registerToolCall("t1", "session1");
+      manager.registerToolCall("session1", "t1");
       expect(manager.getStateByToolCallId("t1")).toBeDefined();
 
       manager.removeToolCallMapping("t1");
@@ -63,8 +62,8 @@ describe("SessionStateManager", () => {
     });
 
     it("does not affect other tool call mappings", () => {
-      manager.registerToolCall("t1", "session1");
-      manager.registerToolCall("t2", "session1");
+      manager.registerToolCall("session1", "t1");
+      manager.registerToolCall("session1", "t2");
 
       manager.removeToolCallMapping("t1");
 
@@ -166,8 +165,8 @@ describe("SessionStateManager", () => {
 
   describe("reset", () => {
     it("clears all mappings and states", () => {
-      manager.registerToolCall("t1", "session1");
-      manager.registerToolCall("t2", "session2");
+      manager.registerToolCall("session1", "t1");
+      manager.registerToolCall("session2", "t2");
       manager.getOrCreateState("session3");
 
       expect(manager.stateCount).toBe(3);

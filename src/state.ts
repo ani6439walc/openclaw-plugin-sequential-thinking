@@ -9,7 +9,7 @@ export class SessionStateManager {
     this.stateBySessionKey = new Map();
   }
 
-  registerToolCall(toolCallId: string, sessionKey: string): void {
+  registerToolCall(sessionKey: string, toolCallId: string): void {
     this.sessionKeyByToolCallId.set(toolCallId, sessionKey);
     this.getOrCreateState(sessionKey);
   }

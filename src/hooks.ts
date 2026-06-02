@@ -1,4 +1,3 @@
-import { logger } from "../api.js";
 import type {
   PluginHookAfterToolCallEvent,
   PluginHookAgentEndEvent,
@@ -10,6 +9,7 @@ import type {
   PluginHookMessageSendingEvent,
   PluginHookToolContext,
 } from "openclaw/plugin-sdk/types";
+import { logger } from "../api.js";
 import { resolveConfig, type SequentialThinkingConfig } from "./config.js";
 import { SessionStateManager } from "./state.js";
 import { PREFER_SEQUENTIAL_THINKING_CONTEXT } from "./tool-metadata.js";
@@ -38,9 +38,8 @@ export function createHookHandlers(deps: HookHandlerDeps) {
     event: PluginHookBeforeToolCallEvent,
     ctx: PluginHookToolContext,
   ) {
-    const toolCallId = event.toolCallId;
-    if (event.toolName === toolName && toolCallId && ctx.sessionKey) {
-      manager.registerToolCall(toolCallId, ctx.sessionKey);
+    if (ctx.sessionKey && event.toolName === toolName && event.toolCallId) {
+      manager.registerToolCall(ctx.sessionKey, event.toolCallId);
       logger.debug(
         `before_tool_call registered ${toolName} state for session ${ctx.sessionKey}`,
       );
@@ -107,9 +106,7 @@ function buildPromptInjectionResult(
     return undefined;
   }
 
-  logger.debug(`injecting appendSystemContext for model ${fullModelName}`, {
-    subsystem: "plugins/sequential-thinking",
-  });
+  logger.debug(`injecting appendSystemContext for model ${fullModelName}`);
   return {
     appendSystemContext: PREFER_SEQUENTIAL_THINKING_CONTEXT,
   };

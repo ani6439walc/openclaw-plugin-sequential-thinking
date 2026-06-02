@@ -125,7 +125,7 @@ describe("registerSequentialThinkingPlugin", () => {
 
     const extension =
       mockApi.session.state.registerSessionExtension.mock.calls[0][0];
-    expect(extension.namespace).toBe("sequential_thinking_state");
+    expect(extension.namespace).toBe("sequential_thinking");
     expect(extension.cleanup).toEqual(expect.any(Function));
   });
 
