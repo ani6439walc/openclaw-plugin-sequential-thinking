@@ -1,19 +1,33 @@
+import { z, preprocess } from "openclaw/plugin-sdk/zod";
+
 export type SequentialThinkingConfig = {
-  thoughtLogging?: boolean;
+  thoughtLogging: boolean;
   models?: string[];
 };
 
-export function resolveConfig(
-  raw: Record<string, unknown>,
-): SequentialThinkingConfig {
-  return {
-    thoughtLogging:
-      typeof raw.thoughtLogging === "boolean" ? raw.thoughtLogging : true,
-    models: Array.isArray(raw.models)
-      ? raw.models
-          .filter((m): m is string => typeof m === "string")
-          .map((m) => m.trim())
-          .filter((m) => m.length > 0)
-      : undefined,
-  };
+const ConfigSchema = preprocess(
+  (value) =>
+    typeof value === "object" && value !== null && !Array.isArray(value)
+      ? value
+      : {},
+  z.object({
+    thoughtLogging: preprocess(
+      (value) => (typeof value === "boolean" ? value : true),
+      z.boolean(),
+    ),
+    models: preprocess(
+      (value) =>
+        Array.isArray(value)
+          ? value
+              .filter((model): model is string => typeof model === "string")
+              .map((model) => model.trim())
+              .filter((model) => model.length > 0)
+          : undefined,
+      z.array(z.string()).optional(),
+    ),
+  }),
+);
+
+export function resolveConfig(raw: unknown): SequentialThinkingConfig {
+  return ConfigSchema.parse(raw) as SequentialThinkingConfig;
 }

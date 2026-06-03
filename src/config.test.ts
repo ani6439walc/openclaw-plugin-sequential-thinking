@@ -8,6 +8,11 @@ describe("resolveConfig", () => {
     expect(result.models).toBeUndefined();
   });
 
+  it("returns defaults when raw is not an object", () => {
+    expect(resolveConfig(undefined)).toEqual({ thoughtLogging: true });
+    expect(resolveConfig("invalid")).toEqual({ thoughtLogging: true });
+  });
+
   it("defaults thoughtLogging to true when not provided", () => {
     const result = resolveConfig({ models: ["claude-sonnet-4"] });
     expect(result.thoughtLogging).toBe(true);
