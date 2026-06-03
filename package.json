@@ -48,6 +48,9 @@
     "test:unit": "vitest run",
     "format": "prettier --write '**/*.md' '**/*.json' '**/*.ts'"
   },
+  "dependencies": {
+    "zod": "4.4.3"
+  },
   "peerDependencies": {
     "openclaw": "2026.5.28",
     "typebox": "1.1.38"
