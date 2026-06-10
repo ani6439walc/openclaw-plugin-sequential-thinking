@@ -6,4 +6,4 @@ allowBuilds:
   sharp: true
   tree-sitter-bash: true
 minimumReleaseAgeExclude:
-  - openclaw@2026.5.28
+  - openclaw@2026.6.5
