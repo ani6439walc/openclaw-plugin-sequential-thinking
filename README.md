@@ -18,6 +18,44 @@ This plugin registers a first-class `sequential_thinking` tool directly into the
 
 ## Architecture
 
+### Module Tree
+
+```
+index.ts
+  └─ plugin.ts → registerSequentialThinkingPlugin()
+       ├─ config.ts → resolveConfig()
+       ├─ tool.ts → SequentialThinkingTool class
+       ├─ schema.ts → TOOL_PARAMETER_SCHEMA
+       ├─ state.ts → SessionStateManager class
+       ├─ tool-metadata.ts → TOOL_DESCRIPTION & PREFER_SEQUENTIAL_THINKING_CONTEXT
+       └─ hooks.ts → createHookHandlers()
+            ├─ state.ts (for session management)
+            └─ config.ts (for hook-time config resolution)
+```
+
+### Module Responsibilities
+
+| Module | Purpose |
+|--------|---------|
+| `index.ts` | Plugin entry point — exports `definePluginEntry` with registration function |
+| `api.ts` | Re-exports from `openclaw/plugin-sdk` (OpenClawPluginApi, createSubsystemLogger) |
+| `src/config.ts` | Config type definition and `resolveConfig()` — parses raw plugin config with defaults |
+| `src/schema.ts` | TypeBox schema for the public `sequential_thinking` tool input contract |
+| `src/tool-metadata.ts` | Tool description and prompt-injection system context for targeted models |
+| `src/tool.ts` | `SequentialThinkingTool` class — core thought processing with input validation & no mutation |
+| `src/state.ts` | `SessionStateManager` class — encapsulated state lifecycle with SDK cleanup integration |
+| `src/hooks.ts` | SDK hook handlers — manages per-session state mapping and lifecycle events |
+| `src/plugin.ts` | Plugin orchestration — resolves config, registers tool, session extension, and SDK hooks |
+
+### Plugin Flow
+
+1. **註冊階段**：`registerSequentialThinkingPlugin()` 註冊工具和鉤子
+2. **工具執行**：`SequentialThinkingTool` 處理思考步驟
+3. **狀態管理**：`SessionStateManager` 追蹤思考歷史和分支
+4. **鉤子處理**：`createHookHandlers()` 處理會話生命週期事件
+
+### Architecture Diagram
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     OpenClaw Runtime                        │
@@ -33,13 +71,14 @@ This plugin registers a first-class `sequential_thinking` tool directly into the
 │  │  ┌────────────────┐    ┌──────────────────────────┐   │  │
 │  │  │ resolveConfig()│    │ SequentialThinkingTool   │   │  │
 │  │  │  (config.ts)   │    │  (tool.ts)               │   │  │
-│  │  └────────┬───────┘    │  - formatThought()       │   │  │
-│  │           │            │  - processThought()      │   │  │
-│  │           ▼            │  - input validation      │   │  │
-│  │  ┌──────────────────┐  └──────────┬───────────────┘   │  │
-│  │  │    SDK Hooks     │◄────────────┘                   │  │
-│  │  │ - before_prompt  │                                 │  │
-│  │  │ - before_tool    │  ┌──────────────────────────┐   │  │
+│  │  └────────┬───────┘    │  - processThought()      │   │  │
+│  │           │            │  - input validation      │   │  │
+│  │           │            │  - formatThought()       │   │  │
+│  │           ▼            └──────────┬───────────────┘   │  │
+│  │  ┌──────────────────┐             │                   │  │
+│  │  │    SDK Hooks     │◄────────────┼───────────────────┤  │
+│  │  │ - before_prompt  │             │                   │  │
+│  │  │ - before_tool    │  ┌──────────┴───────────────┐   │  │
 │  │  │ - after_tool     │  │ SessionStateManager      │   │  │
 │  │  │ - message_sending│  │  (state.ts)              │   │  │
 │  │  │ - before_agent   │  │ - registerToolCall()     │   │  │
@@ -51,26 +90,13 @@ This plugin registers a first-class `sequential_thinking` tool directly into the
 │  │  ┌────────────────────────────────▼────────────────┐  │  │
 │  │  │          SDK Session Extension                  │  │  │
 │  │  │  session.state.registerSessionExtension({       │  │  │
-│  │  │    namespace: "sequential_thinking_state",      │  │  │
+│  │  │    namespace: sequential_thinking,              │  │  │
 │  │  │    cleanup: manager.getCleanupCallback()        │  │  │
 │  │  │  })                                             │  │  │
 │  │  └─────────────────────────────────────────────────┘  │  │
 │  └───────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
-
-### Module Responsibilities
-
-| Module                 | Role                                                                                           |
-| ---------------------- | ---------------------------------------------------------------------------------------------- |
-| `index.ts`             | Plugin entry point — exports `definePluginEntry` with registration function                    |
-| `api.ts`               | Re-exports from `openclaw/plugin-sdk` (OpenClawPluginApi, AnyAgentTool, createSubsystemLogger) |
-| `src/config.ts`        | Config type definition and `resolveConfig()` — parses raw plugin config with defaults          |
-| `src/schema.ts`        | TypeBox schema for the public `sequential_thinking` tool input contract                        |
-| `src/tool-metadata.ts` | Tool description and prompt-injection system context                                           |
-| `src/tool.ts`          | `SequentialThinkingTool` class — core thought processing with input validation & no mutation   |
-| `src/state.ts`         | `SessionStateManager` class — encapsulated state lifecycle with SDK cleanup integration        |
-| `src/plugin.ts`        | Plugin orchestration — resolves config, registers tool, session extension, and SDK hooks       |
 
 ### Lifecycle Hooks
 
