@@ -26,7 +26,7 @@ index.ts
        ├─ config.ts → resolveConfig()
        ├─ tool.ts → SequentialThinkingTool class
        ├─ schema.ts → TOOL_PARAMETER_SCHEMA
-       ├─ state.ts → SessionStateManager class
+       ├─ state.ts → StateManagement interface and CompositeStateManagement implementation
        ├─ tool-metadata.ts → TOOL_DESCRIPTION & PREFER_SEQUENTIAL_THINKING_CONTEXT
        └─ hooks.ts → createHookHandlers()
             ├─ state.ts (for session management)

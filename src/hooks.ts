@@ -11,7 +11,7 @@ import type {
 } from "openclaw/plugin-sdk/types";
 import { logger } from "../api.js";
 import { resolveConfig, type SequentialThinkingConfig } from "./config.js";
-import { SessionStateManager } from "./state.js";
+import { StateManagement } from "./state.js";
 import { PREFER_SEQUENTIAL_THINKING_CONTEXT } from "./tool-metadata.js";
 
 type HookConfigContext = {
@@ -19,7 +19,7 @@ type HookConfigContext = {
 };
 
 type HookHandlerDeps = {
-  manager: SessionStateManager;
+  manager: StateManagement;
   registrationConfig: SequentialThinkingConfig;
   toolName: string;
 };
@@ -121,7 +121,7 @@ function resolveHookConfig(
 }
 
 function purgeSessionState(
-  manager: SessionStateManager,
+  manager: StateManagement,
   sessionKey: string | undefined,
   hookName: string,
   toolName: string,
@@ -136,7 +136,7 @@ function purgeSessionState(
 function createSessionPurgeHandler<
   TEvent,
   TContext extends { sessionKey?: string },
->(manager: SessionStateManager, toolName: string, hookName: string) {
+>(manager: StateManagement, toolName: string, hookName: string) {
   return async (_event: TEvent, ctx: TContext): Promise<void> => {
     purgeSessionState(manager, ctx.sessionKey, hookName, toolName);
   };

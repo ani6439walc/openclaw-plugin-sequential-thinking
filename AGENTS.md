@@ -18,7 +18,7 @@ src/
 ├── tool.ts            # Sequential Thinking core logic
 ├── tool-metadata.ts   # Tool description and prompt content
 ├── schema.ts          # Tool parameter validation schema
-├── state.ts           # Session state management
+├── state.ts           # State management interface and composite implementation
 ├── config.ts          # Plugin configuration processing
 ├── plugin.test.ts     # Plugin integration tests
 ├── state.test.ts      # State management unit tests
@@ -36,7 +36,7 @@ index.ts
        ├─ config.ts → resolveConfig()
        ├─ tool.ts → SequentialThinkingTool class
        ├─ schema.ts → TOOL_PARAMETER_SCHEMA
-       ├─ state.ts → SessionStateManager class
+       ├─ state.ts → StateManagement interface and CompositeStateManagement implementation
        ├─ tool-metadata.ts → TOOL_DESCRIPTION & PREFER_SEQUENTIAL_THINKING_CONTEXT
        └─ hooks.ts → createHookHandlers()
             ├─ state.ts (for session management)
@@ -53,7 +53,7 @@ index.ts
 | `src/schema.ts` | TypeBox schema for the public `sequential_thinking` tool input contract |
 | `src/tool-metadata.ts` | Tool description and prompt-injection system context for targeted models |
 | `src/tool.ts` | `SequentialThinkingTool` class — core thought processing with input validation & no mutation |
-| `src/state.ts` | `SessionStateManager` class — encapsulated state lifecycle with SDK cleanup integration |
+| `src/state.ts` | `StateManagement` interface and `CompositeStateManagement` class — encapsulated state lifecycle with SDK cleanup integration |
 | `src/hooks.ts` | SDK hook handlers — manages per-session state mapping and lifecycle events |
 | `src/plugin.ts` | Plugin orchestration — resolves config, registers tool, session extension, and SDK hooks |
 
@@ -61,13 +61,13 @@ index.ts
 
 1. **Registration Phase**: `registerSequentialThinkingPlugin()` registers tool and hooks
 2. **Tool Execution**: `SequentialThinkingTool` processes thinking steps
-3. **State Management**: `SessionStateManager` tracks thought history and branches
+3. **State Management**: `CompositeStateManagement` tracks thought history and branches
 4. **Hooks Processing**: `createHookHandlers()` handles session lifecycle events
 
 ### Key Classes
 
 - `SequentialThinkingTool`: Core thinking logic, handles `thought`, `branch`, `revision` operations
-- `SessionStateManager`: Session state management, supports thought history and branching
+- `CompositeStateManagement`: Session state management, supports thought history and branching through interface abstraction
 - `RunState`: Execution state type containing `thoughtHistory` and `branches`
 
 ## Code Style & Patterns
