@@ -200,8 +200,7 @@ Facilitates a detailed, step-by-step thinking process for problem-solving and an
 pnpm install
 pnpm build          # tsc compilation
 pnpm typecheck      # tsc --noEmit
-pnpm test:unit      # vitest run (78 tests across 4 files)
-pnpm test           # typecheck + test:unit
+pnpm test           # vitest run
 pnpm format         # prettier
 ```
 

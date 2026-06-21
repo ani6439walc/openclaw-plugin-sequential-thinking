@@ -7,7 +7,7 @@ A native OpenClaw plugin that provides the `sequential_thinking` tool for dynami
 - `pnpm test` - Run tests
 - `pnpm build` - Build project
 - `pnpm format` - Format code
-- `pnpm lint` - Execute linting
+- `pnpm typecheck` - Type checking
 
 ## Project Structure
 
