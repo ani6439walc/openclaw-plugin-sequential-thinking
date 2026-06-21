@@ -35,7 +35,7 @@ export class SequentialThinkingTool {
       branchId,
     } = thoughtData;
 
-    let prefix = "";
+    let prefix = "💭 Thought";
     let context = "";
 
     if (isRevision) {
@@ -44,9 +44,6 @@ export class SequentialThinkingTool {
     } else if (branchFromThought) {
       prefix = "🌿 Branch";
       context = ` (from thought ${branchFromThought}, ID: ${branchId})`;
-    } else {
-      prefix = "💭 Thought";
-      context = "";
     }
 
     return `${prefix} ${thoughtNumber}/${totalThoughts}${context}\n${thought}`;
