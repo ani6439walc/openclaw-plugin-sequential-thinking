@@ -21,7 +21,7 @@ export class SequentialThinkingTool {
   private thoughtLogging: boolean;
 
   constructor(thoughtLogging?: boolean) {
-    this.thoughtLogging = thoughtLogging ?? true;
+    this.thoughtLogging = thoughtLogging ?? false;
   }
 
   private formatThought(thoughtData: ThoughtData): string {

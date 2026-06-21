@@ -145,7 +145,7 @@ In `openclaw.json`:
       "sequential-thinking": {
         "enabled": true,
         "config": {
-          "thoughtLogging": true,
+          "thoughtLogging": false,
           "models": [
             "anthropic/claude-sonnet-4",
             "google/gemini-3-flash-preview",
@@ -180,7 +180,7 @@ Facilitates a detailed, step-by-step thinking process for problem-solving and an
 
 ## Plugin Config
 
-- `thoughtLogging` (boolean, default: `true`): Log formatted thoughts to console
+- `thoughtLogging` (boolean, default: `false`): Log formatted thoughts to console
 - `models` (string[], default: `[]`): Model IDs that should receive a prompt injection encouraging preference for `sequential_thinking` on complex problems. Empty strings are automatically filtered out.
 
 ## Differences from MCP Original
