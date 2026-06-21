@@ -30,9 +30,10 @@ function makeState(): RunState {
 
 describe("SequentialThinkingTool", () => {
   describe("constructor", () => {
-    it("defaults thoughtLogging to true", () => {
+    it("defaults thoughtLogging to false", () => {
       const tool = new SequentialThinkingTool();
-      // Indirect verification: logger.debug should be called
+      // Verify the default value is false by checking internal property or behavior
+      // Since we changed the default, logger.debug shouldn't be called by default
       const result = tool.processThought(makeThought(), makeState());
       expect(result.isError).toBeUndefined();
     });

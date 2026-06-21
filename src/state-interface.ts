@@ -1,4 +1,4 @@
-import { RunState, ThoughtData } from './tool.js';
+import { RunState, ThoughtData } from "./tool.js";
 
 /**
  * Interface for managing session state in the sequential thinking plugin
@@ -42,7 +42,9 @@ export interface StateManagement {
   /**
    * Get cleanup callback for session extension
    */
-  getCleanupCallback(): (action: 'disable' | 'reset' | 'delete' | 'restart') => void;
+  getCleanupCallback(): (
+    action: "disable" | "reset" | "delete" | "restart",
+  ) => void;
 
   /**
    * Reset all state
@@ -67,7 +69,11 @@ export interface StateOperations {
   /**
    * Add a branch to the state
    */
-  addBranch(sessionKey: string, branchId: string, thoughts: ThoughtData[]): void;
+  addBranch(
+    sessionKey: string,
+    branchId: string,
+    thoughts: ThoughtData[],
+  ): void;
 
   /**
    * Get all branch IDs for a session

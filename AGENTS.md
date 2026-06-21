@@ -47,17 +47,17 @@ index.ts
 
 ### Module Responsibilities
 
-| Module | Purpose |
-|--------|---------|
-| `index.ts` | Plugin entry point — exports `definePluginEntry` with registration function |
-| `api.ts` | Re-exports from `openclaw/plugin-sdk` (OpenClawPluginApi, createSubsystemLogger) |
-| `src/config.ts` | Config type definition and `resolveConfig()` — parses raw plugin config with defaults |
-| `src/schema.ts` | TypeBox schema for the public `sequential_thinking` tool input contract |
-| `src/tool-metadata.ts` | Tool description and prompt-injection system context for targeted models |
-| `src/tool.ts` | `SequentialThinkingTool` class — core thought processing with input validation & no mutation |
-| `src/state.ts` | `StateManagement` interface and `CompositeStateManagement` class — encapsulated state lifecycle with SDK cleanup integration |
-| `src/hooks.ts` | SDK hook handlers — manages per-session state mapping and lifecycle events |
-| `src/plugin.ts` | Plugin orchestration — resolves config, registers tool, session extension, and SDK hooks |
+| Module                 | Purpose                                                                                                                      |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`             | Plugin entry point — exports `definePluginEntry` with registration function                                                  |
+| `api.ts`               | Re-exports from `openclaw/plugin-sdk` (OpenClawPluginApi, createSubsystemLogger)                                             |
+| `src/config.ts`        | Config type definition and `resolveConfig()` — parses raw plugin config with defaults                                        |
+| `src/schema.ts`        | TypeBox schema for the public `sequential_thinking` tool input contract                                                      |
+| `src/tool-metadata.ts` | Tool description and prompt-injection system context for targeted models                                                     |
+| `src/tool.ts`          | `SequentialThinkingTool` class — core thought processing with input validation & no mutation                                 |
+| `src/state.ts`         | `StateManagement` interface and `CompositeStateManagement` class — encapsulated state lifecycle with SDK cleanup integration |
+| `src/hooks.ts`         | SDK hook handlers — manages per-session state mapping and lifecycle events                                                   |
+| `src/plugin.ts`        | Plugin orchestration — resolves config, registers tool, session extension, and SDK hooks                                     |
 
 ### Plugin Flow
 

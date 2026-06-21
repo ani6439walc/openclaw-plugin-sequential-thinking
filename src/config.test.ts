@@ -4,18 +4,18 @@ import { resolveConfig } from "./config.js";
 describe("resolveConfig", () => {
   it("returns defaults when raw is empty", () => {
     const result = resolveConfig({});
-    expect(result.thoughtLogging).toBe(true);
+    expect(result.thoughtLogging).toBe(false);
     expect(result.models).toBeUndefined();
   });
 
   it("returns defaults when raw is not an object", () => {
-    expect(resolveConfig(undefined)).toEqual({ thoughtLogging: true });
-    expect(resolveConfig("invalid")).toEqual({ thoughtLogging: true });
+    expect(resolveConfig(undefined)).toEqual({ thoughtLogging: false });
+    expect(resolveConfig("invalid")).toEqual({ thoughtLogging: false });
   });
 
-  it("defaults thoughtLogging to true when not provided", () => {
+  it("defaults thoughtLogging to false when not provided", () => {
     const result = resolveConfig({ models: ["claude-sonnet-4"] });
-    expect(result.thoughtLogging).toBe(true);
+    expect(result.thoughtLogging).toBe(false);
     expect(result.models).toEqual(["claude-sonnet-4"]);
   });
 
@@ -29,16 +29,16 @@ describe("resolveConfig", () => {
     expect(result.thoughtLogging).toBe(false);
   });
 
-  it("defaults thoughtLogging to true for non-boolean values", () => {
-    expect(resolveConfig({ thoughtLogging: 0 }).thoughtLogging).toBe(true);
-    expect(resolveConfig({ thoughtLogging: "" }).thoughtLogging).toBe(true);
-    expect(resolveConfig({ thoughtLogging: "yes" }).thoughtLogging).toBe(true);
+  it("defaults thoughtLogging to false for non-boolean values", () => {
+    expect(resolveConfig({ thoughtLogging: 0 }).thoughtLogging).toBe(false);
+    expect(resolveConfig({ thoughtLogging: "" }).thoughtLogging).toBe(false);
+    expect(resolveConfig({ thoughtLogging: "yes" }).thoughtLogging).toBe(false);
   });
 
-  it("defaults thoughtLogging to true for null and undefined", () => {
-    expect(resolveConfig({ thoughtLogging: null }).thoughtLogging).toBe(true);
+  it("defaults thoughtLogging to false for null and undefined", () => {
+    expect(resolveConfig({ thoughtLogging: null }).thoughtLogging).toBe(false);
     expect(resolveConfig({ thoughtLogging: undefined }).thoughtLogging).toBe(
-      true,
+      false,
     );
   });
 
