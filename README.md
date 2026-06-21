@@ -49,10 +49,10 @@ index.ts
 
 ### Plugin Flow
 
-1. **註冊階段**：`registerSequentialThinkingPlugin()` 註冊工具和鉤子
-2. **工具執行**：`SequentialThinkingTool` 處理思考步驟
-3. **狀態管理**：`SessionStateManager` 追蹤思考歷史和分支
-4. **鉤子處理**：`createHookHandlers()` 處理會話生命週期事件
+1. **Registration Phase**: `registerSequentialThinkingPlugin()` registers tool and hooks
+2. **Tool Execution**: `SequentialThinkingTool` processes thinking steps
+3. **State Management**: `SessionStateManager` tracks thought history and branches
+4. **Hooks Processing**: `createHookHandlers()` handles session lifecycle events
 
 ### Architecture Diagram
 
