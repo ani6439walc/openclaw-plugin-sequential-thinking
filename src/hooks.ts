@@ -11,7 +11,7 @@ import type {
 } from "openclaw/plugin-sdk/types";
 import { logger } from "../api.js";
 import { resolveConfig, type SequentialThinkingConfig } from "./config.js";
-import { StateManagement } from "./state.js";
+import type { StateManagement } from "./state.js";
 import { PREFER_SEQUENTIAL_THINKING_CONTEXT } from "./tool-metadata.js";
 
 type HookConfigContext = {

@@ -19,6 +19,8 @@ src/
 ├── tool-metadata.ts   # Tool description and prompt content
 ├── schema.ts          # Tool parameter validation schema
 ├── state.ts           # State management interface and composite implementation
+├── state-interface.ts # StateManagement and StateOperations interfaces
+├── composite-state-management.ts # CompositeStateManagement implementation
 ├── config.ts          # Plugin configuration processing
 ├── plugin.test.ts     # Plugin integration tests
 ├── state.test.ts      # State management unit tests
