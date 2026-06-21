@@ -4,18 +4,18 @@ import { resolveConfig } from "./config.js";
 describe("resolveConfig", () => {
   it("returns defaults when raw is empty", () => {
     const result = resolveConfig({});
-    expect(result.thoughtLogging).toBe(true);
+    expect(result.thoughtLogging).toBe(false);
     expect(result.models).toBeUndefined();
   });
 
   it("returns defaults when raw is not an object", () => {
-    expect(resolveConfig(undefined)).toEqual({ thoughtLogging: true });
-    expect(resolveConfig("invalid")).toEqual({ thoughtLogging: true });
+    expect(resolveConfig(undefined)).toEqual({ thoughtLogging: false });
+    expect(resolveConfig("invalid")).toEqual({ thoughtLogging: false });
   });
 
-  it("defaults thoughtLogging to true when not provided", () => {
+  it("defaults thoughtLogging to false when not provided", () => {
     const result = resolveConfig({ models: ["claude-sonnet-4"] });
-    expect(result.thoughtLogging).toBe(true);
+    expect(result.thoughtLogging).toBe(false);
     expect(result.models).toEqual(["claude-sonnet-4"]);
   });
 

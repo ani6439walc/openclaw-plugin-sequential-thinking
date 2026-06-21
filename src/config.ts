@@ -7,7 +7,7 @@ export type SequentialThinkingConfig = {
 
 const ConfigSchema = z
   .object({
-    thoughtLogging: z.boolean().catch(true),
+    thoughtLogging: z.boolean().catch(false),
     models: z
       .array(z.unknown())
       .transform((models) =>
@@ -20,7 +20,7 @@ const ConfigSchema = z
       .catch(undefined),
   })
   .catch({
-    thoughtLogging: true,
+    thoughtLogging: false,
   });
 
 export function resolveConfig(raw: unknown): SequentialThinkingConfig {

@@ -15,7 +15,7 @@
       "thoughtLogging": {
         "type": "boolean",
         "description": "Log formatted thoughts to console",
-        "default": true
+        "default": false
       },
       "models": {
         "type": "array",
