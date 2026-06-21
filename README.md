@@ -217,4 +217,4 @@ MIT
 
 ---
 
-_🌸　Powered by Ａni & Wan, Jiun Wei © 2026_
+_🌸 Powered by Ani, Wan Jiun Wei © 2026_
