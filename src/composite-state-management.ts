@@ -23,8 +23,24 @@ class SessionMappingService {
     this.sessionKeyByToolCallId.delete(toolCallId);
   }
 
+  removeMappingsForSession(sessionKey: string): void {
+    const toRemove: string[] = [];
+    for (const [toolCallId, sk] of this.sessionKeyByToolCallId) {
+      if (sk === sessionKey) {
+        toRemove.push(toolCallId);
+      }
+    }
+    for (const toolCallId of toRemove) {
+      this.sessionKeyByToolCallId.delete(toolCallId);
+    }
+  }
+
   clear(): void {
     this.sessionKeyByToolCallId.clear();
+  }
+
+  getAllMappings(): Map<string, string> {
+    return new Map(this.sessionKeyByToolCallId);
   }
 }
 
@@ -82,15 +98,18 @@ class StateStorageService {
  */
 class LifecycleManager {
   private storageService: StateStorageService;
+  private mappingService: SessionMappingService;
 
-  constructor(storageService: StateStorageService) {
+  constructor(storageService: StateStorageService, mappingService: SessionMappingService) {
     this.storageService = storageService;
+    this.mappingService = mappingService;
   }
 
   getCleanupCallback(): (action: 'disable' | 'reset' | 'delete' | 'restart') => void {
     return (action: 'disable' | 'reset' | 'delete' | 'restart') => {
       for (const key of this.storageService.getAllSessionKeys()) {
         this.storageService.purgeSessionState(key);
+        this.mappingService.removeMappingsForSession(key);
       }
     };
   }
@@ -107,7 +126,7 @@ export class CompositeStateManagement implements StateManagement, StateOperation
   constructor() {
     this.mappingService = new SessionMappingService();
     this.storageService = new StateStorageService();
-    this.lifecycleManager = new LifecycleManager(this.storageService);
+    this.lifecycleManager = new LifecycleManager(this.storageService, this.mappingService);
   }
 
   registerToolCall(sessionKey: string, toolCallId: string): void {
@@ -132,11 +151,7 @@ export class CompositeStateManagement implements StateManagement, StateOperation
 
   purgeSessionState(sessionKey: string): void {
     // Clean up mappings that point to this session
-    for (const [toolCallId, sk] of this.mappingService['sessionKeyByToolCallId']) {
-      if (sk === sessionKey) {
-        this.mappingService.removeToolCallMapping(toolCallId);
-      }
-    }
+    this.mappingService.removeMappingsForSession(sessionKey);
     
     this.storageService.purgeSessionState(sessionKey);
   }

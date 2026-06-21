@@ -9,5 +9,7 @@ export type { StateManagement };
 export { CompositeStateManagement };
 
 // For backward compatibility, we alias the new class as the old name
-// TODO: Consider renaming all references to use CompositeStateManagement instead
+/**
+ * @deprecated Use CompositeStateManagement or StateManagement interface instead
+ */
 export class SessionStateManager extends CompositeStateManagement {}

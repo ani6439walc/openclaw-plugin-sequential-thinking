@@ -110,10 +110,8 @@ describe("CompositeStateManagement", () => {
   });
 
   it("should provide cleanup callback", () => {
-    const cleanupFn = manager.getCleanupCallback();
-    expect(typeof cleanupFn).toBe("function");
-    
-    // Add some state
+    // Add some state and tool call mappings
+    manager.registerToolCall("session1", "tool1");
     const thought: ThoughtData = {
       thought: "Test thought",
       thoughtNumber: 1,
@@ -122,11 +120,14 @@ describe("CompositeStateManagement", () => {
     };
     manager.addThought("session1", thought);
     expect(manager.stateCount).toBe(1);
+    expect(manager.getStateByToolCallId("tool1")).toBeDefined();
     
     // Execute cleanup
+    const cleanupFn = manager.getCleanupCallback();
     cleanupFn("reset");
     
     // State should be cleared
     expect(manager.stateCount).toBe(0);
+    expect(manager.getStateByToolCallId("tool1")).toBeUndefined();
   });
 });
