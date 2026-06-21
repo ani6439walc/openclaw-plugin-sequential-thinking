@@ -56,46 +56,41 @@ index.ts
 
 ### Architecture Diagram
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     OpenClaw Runtime                        │
-│                                                             │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │              Plugin Entry (index.ts)                  │  │
-│  │  definePluginEntry({ register: registerSequential...})│  │
-│  └──────────────────────┬────────────────────────────────┘  │
-│                         │                                   │
-│  ┌──────────────────────▼────────────────────────────────┐  │
-│  │           Plugin Registration (plugin.ts)             │  │
-│  │                                                       │  │
-│  │  ┌────────────────┐    ┌──────────────────────────┐   │  │
-│  │  │ resolveConfig()│    │ SequentialThinkingTool   │   │  │
-│  │  │  (config.ts)   │    │  (tool.ts)               │   │  │
-│  │  └────────┬───────┘    │  - processThought()      │   │  │
-│  │           │            │  - input validation      │   │  │
-│  │           │            │  - formatThought()       │   │  │
-│  │           ▼            └──────────┬───────────────┘   │  │
-│  │  ┌──────────────────┐             │                   │  │
-│  │  │    SDK Hooks     │◄────────────┼───────────────────┤  │
-│  │  │ - before_prompt  │             │                   │  │
-│  │  │ - before_tool    │  ┌──────────┴───────────────┐   │  │
-│  │  │ - after_tool     │  │ SessionStateManager      │   │  │
-│  │  │ - message_sending│  │  (state.ts)              │   │  │
-│  │  │ - before_agent   │  │ - registerToolCall()     │   │  │
-│  │  │ - agent_end      │  │ - getOrCreateState()     │   │  │
-│  │  │                  │  │ - purgeSessionState()    │   │  │
-│  │  │                  │  │ - getCleanupCallback()   │   │  │
-│  │  └──────────────────┘  └──────────┬───────────────┘   │  │
-│  │                                   │                   │  │
-│  │  ┌────────────────────────────────▼────────────────┐  │  │
-│  │  │          SDK Session Extension                  │  │  │
-│  │  │  session.state.registerSessionExtension({       │  │  │
-│  │  │    namespace: sequential_thinking,              │  │  │
-│  │  │    cleanup: manager.getCleanupCallback()        │  │  │
-│  │  │  })                                             │  │  │
-│  │  └─────────────────────────────────────────────────┘  │  │
-│  └───────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph "OpenClaw Runtime"
+        EntryPoint["index.ts<br/>Plugin Entry"]
+        subgraph "Plugin Registration (plugin.ts)"
+            ConfigRes["config.ts<br/>resolveConfig()"]
+            ToolClass["tool.ts<br/>SequentialThinkingTool"]
+            subgraph "SDK Hooks Integration"
+                Hooks["hooks.ts<br/>createHookHandlers()"]
+            end
+            SessionExt["Session Extension<br/>registerSessionExtension()"]
+        end
+        
+        subgraph "State Management (state.ts)"
+            StateManager["SessionStateManager<br/>Per-session state isolation"]
+        end
+    end
+    
+    EntryPoint --> PluginReg["registerSequentialThinkingPlugin()"]
+    PluginReg --> ConfigRes
+    PluginReg --> ToolClass
+    PluginReg --> Hooks
+    PluginReg --> SessionExt
+    
+    ConfigRes --> Hooks
+    ToolClass --> Hooks
+    StateManager --> Hooks
+    StateManager --> SessionExt
+    
+    Hooks -.->|"before_prompt_build<br/>before_tool_call<br/>after_tool_call<br/>message_sending<br/>before_agent_reply<br/>agent_end"| OpenClawSDK["OpenClaw SDK Events"]
+    
+    style EntryPoint fill:#e1f5fe
+    style ToolClass fill:#f3e5f5
+    style StateManager fill:#e8f5e8
+    style OpenClawSDK fill:#fff3e0
 ```
 
 ### Lifecycle Hooks
