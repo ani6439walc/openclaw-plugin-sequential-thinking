@@ -24,14 +24,10 @@ class SessionMappingService {
   }
 
   removeMappingsForSession(sessionKey: string): void {
-    const toRemove: string[] = [];
     for (const [toolCallId, sk] of this.sessionKeyByToolCallId) {
       if (sk === sessionKey) {
-        toRemove.push(toolCallId);
+        this.sessionKeyByToolCallId.delete(toolCallId);
       }
-    }
-    for (const toolCallId of toRemove) {
-      this.sessionKeyByToolCallId.delete(toolCallId);
     }
   }
 
@@ -107,10 +103,8 @@ class LifecycleManager {
 
   getCleanupCallback(): (action: 'disable' | 'reset' | 'delete' | 'restart') => void {
     return (action: 'disable' | 'reset' | 'delete' | 'restart') => {
-      for (const key of this.storageService.getAllSessionKeys()) {
-        this.storageService.purgeSessionState(key);
-        this.mappingService.removeMappingsForSession(key);
-      }
+      this.storageService.clear();
+      this.mappingService.clear();
     };
   }
 }
@@ -194,7 +188,7 @@ export class CompositeStateManagement implements StateManagement, StateOperation
 
   getThoughtHistory(sessionKey: string): ThoughtData[] {
     const state = this.getOrCreateState(sessionKey);
-    return [...state.thoughtHistory]; // Return a copy to prevent external mutations
+    return [...state.thoughtHistory]; // Return a shallow copy to prevent external array mutations (but not mutations of individual ThoughtData properties)
   }
 
   addBranch(sessionKey: string, branchId: string, thoughts: ThoughtData[]): void {
