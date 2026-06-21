@@ -2,7 +2,7 @@ import { type OpenClawPluginApi } from "../api.js";
 import { resolveConfig } from "./config.js";
 import { createHookHandlers } from "./hooks.js";
 import { TOOL_PARAMETER_SCHEMA } from "./schema.js";
-import { SessionStateManager } from "./state.js";
+import { StateManagement, SessionStateManager } from "./state.js";
 import { TOOL_DESCRIPTION } from "./tool-metadata.js";
 import {
   SequentialThinkingTool,
@@ -81,7 +81,7 @@ export function registerSequentialThinkingPlugin(api: OpenClawPluginApi): void {
 }
 
 function createSessionExtension(
-  manager: SessionStateManager,
+  manager: StateManagement,
 ): SessionExtensionRegistration {
   return {
     namespace: TOOL_NAME,
