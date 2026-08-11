@@ -30,7 +30,7 @@ function makeState(): RunState {
 
 describe("SequentialThinkingTool", () => {
   describe("constructor", () => {
-    it("defaults thoughtLogging to true", () => {
+    it("defaults thoughtLogging to false", () => {
       const tool = new SequentialThinkingTool();
       // Indirect verification: logger.debug should be called
       const result = tool.processThought(makeThought(), makeState());

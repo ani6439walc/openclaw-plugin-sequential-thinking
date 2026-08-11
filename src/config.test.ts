@@ -29,16 +29,16 @@ describe("resolveConfig", () => {
     expect(result.thoughtLogging).toBe(false);
   });
 
-  it("defaults thoughtLogging to true for non-boolean values", () => {
-    expect(resolveConfig({ thoughtLogging: 0 }).thoughtLogging).toBe(true);
-    expect(resolveConfig({ thoughtLogging: "" }).thoughtLogging).toBe(true);
-    expect(resolveConfig({ thoughtLogging: "yes" }).thoughtLogging).toBe(true);
+  it("defaults thoughtLogging to false for non-boolean values", () => {
+    expect(resolveConfig({ thoughtLogging: 0 }).thoughtLogging).toBe(false);
+    expect(resolveConfig({ thoughtLogging: "" }).thoughtLogging).toBe(false);
+    expect(resolveConfig({ thoughtLogging: "yes" }).thoughtLogging).toBe(false);
   });
 
-  it("defaults thoughtLogging to true for null and undefined", () => {
-    expect(resolveConfig({ thoughtLogging: null }).thoughtLogging).toBe(true);
+  it("defaults thoughtLogging to false for null and undefined", () => {
+    expect(resolveConfig({ thoughtLogging: null }).thoughtLogging).toBe(false);
     expect(resolveConfig({ thoughtLogging: undefined }).thoughtLogging).toBe(
-      true,
+      false,
     );
   });
 

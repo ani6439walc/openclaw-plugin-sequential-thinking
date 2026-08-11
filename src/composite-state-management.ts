@@ -1,5 +1,5 @@
-import { RunState, ThoughtData } from './tool.js';
-import { StateManagement, StateOperations } from './state-interface.js';
+import { RunState, ThoughtData } from "./tool.js";
+import { StateManagement, StateOperations } from "./state-interface.js";
 
 /**
  * Mapping service for associating tool calls with session keys
@@ -96,13 +96,18 @@ class LifecycleManager {
   private storageService: StateStorageService;
   private mappingService: SessionMappingService;
 
-  constructor(storageService: StateStorageService, mappingService: SessionMappingService) {
+  constructor(
+    storageService: StateStorageService,
+    mappingService: SessionMappingService,
+  ) {
     this.storageService = storageService;
     this.mappingService = mappingService;
   }
 
-  getCleanupCallback(): (action: 'disable' | 'reset' | 'delete' | 'restart') => void {
-    return (action: 'disable' | 'reset' | 'delete' | 'restart') => {
+  getCleanupCallback(): (
+    action: "disable" | "reset" | "delete" | "restart",
+  ) => void {
+    return (action: "disable" | "reset" | "delete" | "restart") => {
       this.storageService.clear();
       this.mappingService.clear();
     };
@@ -112,7 +117,9 @@ class LifecycleManager {
 /**
  * Composite implementation of StateManagement and StateOperations
  */
-export class CompositeStateManagement implements StateManagement, StateOperations {
+export class CompositeStateManagement
+  implements StateManagement, StateOperations
+{
   private mappingService: SessionMappingService;
   private storageService: StateStorageService;
   private lifecycleManager: LifecycleManager;
@@ -120,7 +127,10 @@ export class CompositeStateManagement implements StateManagement, StateOperation
   constructor() {
     this.mappingService = new SessionMappingService();
     this.storageService = new StateStorageService();
-    this.lifecycleManager = new LifecycleManager(this.storageService, this.mappingService);
+    this.lifecycleManager = new LifecycleManager(
+      this.storageService,
+      this.mappingService,
+    );
   }
 
   registerToolCall(sessionKey: string, toolCallId: string): void {
@@ -146,7 +156,7 @@ export class CompositeStateManagement implements StateManagement, StateOperation
   purgeSessionState(sessionKey: string): void {
     // Clean up mappings that point to this session
     this.mappingService.removeMappingsForSession(sessionKey);
-    
+
     this.storageService.purgeSessionState(sessionKey);
   }
 
@@ -158,7 +168,9 @@ export class CompositeStateManagement implements StateManagement, StateOperation
     return this.storageService.stateCount;
   }
 
-  getCleanupCallback(): (action: 'disable' | 'reset' | 'delete' | 'restart') => void {
+  getCleanupCallback(): (
+    action: "disable" | "reset" | "delete" | "restart",
+  ) => void {
     return this.lifecycleManager.getCleanupCallback();
   }
 
@@ -169,7 +181,7 @@ export class CompositeStateManagement implements StateManagement, StateOperation
 
   addThought(sessionKey: string, thought: ThoughtData): void {
     const state = this.getOrCreateState(sessionKey);
-    
+
     // Use local copy to avoid mutating input
     const adjustedInput = { ...thought };
     if (adjustedInput.thoughtNumber > adjustedInput.totalThoughts) {
@@ -191,7 +203,11 @@ export class CompositeStateManagement implements StateManagement, StateOperation
     return [...state.thoughtHistory]; // Return a shallow copy to prevent external array mutations (but not mutations of individual ThoughtData properties)
   }
 
-  addBranch(sessionKey: string, branchId: string, thoughts: ThoughtData[]): void {
+  addBranch(
+    sessionKey: string,
+    branchId: string,
+    thoughts: ThoughtData[],
+  ): void {
     const state = this.getOrCreateState(sessionKey);
     state.branches[branchId] = [...thoughts];
   }

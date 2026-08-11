@@ -37,17 +37,17 @@ index.ts
 
 ### Module Responsibilities
 
-| Module | Purpose |
-|--------|---------|
-| `index.ts` | Plugin entry point — exports `definePluginEntry` with registration function |
-| `api.ts` | Re-exports from `openclaw/plugin-sdk` (OpenClawPluginApi, createSubsystemLogger) |
-| `src/config.ts` | Config type definition and `resolveConfig()` — parses raw plugin config with defaults |
-| `src/schema.ts` | TypeBox schema for the public `sequential_thinking` tool input contract |
-| `src/tool-metadata.ts` | Tool description and prompt-injection system context for targeted models |
-| `src/tool.ts` | `SequentialThinkingTool` class — core thought processing with input validation & no mutation |
-| `src/state.ts` | `SessionStateManager` class — encapsulated state lifecycle with SDK cleanup integration |
-| `src/hooks.ts` | SDK hook handlers — manages per-session state mapping and lifecycle events |
-| `src/plugin.ts` | Plugin orchestration — resolves config, registers tool, session extension, and SDK hooks |
+| Module                 | Purpose                                                                                      |
+| ---------------------- | -------------------------------------------------------------------------------------------- |
+| `index.ts`             | Plugin entry point — exports `definePluginEntry` with registration function                  |
+| `api.ts`               | Re-exports from `openclaw/plugin-sdk` (OpenClawPluginApi, createSubsystemLogger)             |
+| `src/config.ts`        | Config type definition and `resolveConfig()` — parses raw plugin config with defaults        |
+| `src/schema.ts`        | TypeBox schema for the public `sequential_thinking` tool input contract                      |
+| `src/tool-metadata.ts` | Tool description and prompt-injection system context for targeted models                     |
+| `src/tool.ts`          | `SequentialThinkingTool` class — core thought processing with input validation & no mutation |
+| `src/state.ts`         | `SessionStateManager` class — encapsulated state lifecycle with SDK cleanup integration      |
+| `src/hooks.ts`         | SDK hook handlers — manages per-session state mapping and lifecycle events                   |
+| `src/plugin.ts`        | Plugin orchestration — resolves config, registers tool, session extension, and SDK hooks     |
 
 ### Plugin Flow
 
@@ -70,25 +70,25 @@ graph TB
             end
             SessionExt["Session Extension<br/>registerSessionExtension()"]
         end
-        
+
         subgraph "State Management (state.ts)"
             StateManager["SessionStateManager<br/>Per-session state isolation"]
         end
     end
-    
+
     EntryPoint --> PluginReg["registerSequentialThinkingPlugin()"]
     PluginReg --> ConfigRes
     PluginReg --> ToolClass
     PluginReg --> Hooks
     PluginReg --> SessionExt
-    
+
     ConfigRes --> Hooks
     ToolClass --> Hooks
     StateManager --> Hooks
     StateManager --> SessionExt
-    
+
     Hooks -.->|"before_prompt_build<br/>before_tool_call<br/>after_tool_call<br/>message_sending<br/>before_agent_reply<br/>agent_end"| OpenClawSDK["OpenClaw SDK Events"]
-    
+
     style EntryPoint fill:#e1f5fe
     style ToolClass fill:#f3e5f5
     style StateManager fill:#e8f5e8
